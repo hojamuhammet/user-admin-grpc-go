@@ -1,0 +1,8 @@
+# environmental variables
+.env
+
+# generated files
+gen
+
+# binaries
+*.exe

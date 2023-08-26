@@ -1,0 +1,49 @@
+syntax = "proto3";
+
+package user;
+
+option go_package = "./gen";
+
+import "google/protobuf/timestamp.proto";
+
+message User {
+    int32 id = 1;
+    string first_name = 2;
+    string last_name = 3;
+    string phone_number = 4;
+    bool blocked = 5;
+    google.protobuf.Timestamp registration_date = 6;
+}
+ 
+message UsersList {
+    repeated User users = 1;
+}
+
+message UserID {
+    int32 id = 1;
+}
+
+message CreateUserRequest {
+    string first_name = 1;
+    string last_name = 2;
+    string phone_number = 3;
+}
+
+message UpdateUserRequest {
+    int32 id = 1;
+    string first_name = 2;
+    string last_name = 3;
+    string phone_number = 4;
+}
+
+message Empty {}
+
+service UserService {
+    rpc GetAllUsers (Empty) returns (UsersList) {}
+    rpc GetUserById (UserID) returns (User) {}
+    rpc CreateUser (CreateUserRequest) returns (User) {}
+    rpc UpdateUser (UpdateUserRequest) returns (User) {}
+    rpc DeleteUser (UserID) returns (Empty) {}
+    rpc BlockUser (UserID) returns (Empty) {}
+    rpc UnblockUser(UserID) returns (Empty) {}
+}
