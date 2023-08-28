@@ -18,3 +18,4 @@ func NewUserService(cfg *config.Config) pb.UserServiceServer {
 func (us *UserService) RegisterService(server *grpc.Server) {
 	pb.RegisterUserServiceServer(server, us)
 }
+
