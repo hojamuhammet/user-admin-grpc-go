@@ -1,11 +1,9 @@
 package database
 
 import (
-	"context"
 	"database/sql"
 	"fmt"
 	"log"
-	"time"
 
 	_ "github.com/lib/pq"
 
@@ -15,20 +13,19 @@ import (
 var db *sql.DB
 
 func InitDB(cfg *config.Config) error {
-	connectionString := fmt.Sprintf("user=%s password=%s dbname=%s host=%s port=%s sslmode=disable",
-	cfg.DBUser, cfg.DBPassword, cfg.DBUser, cfg.DBHost, cfg.DBPort)
+	connectionString := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
+	cfg.DBHost, cfg.DBPort, cfg.DBUser, cfg.DBPassword, cfg.DBName)
+
+	log.Printf("Connection String: %s", connectionString)
 
 	var err error
 	db, err = sql.Open("postgres", connectionString)
 	if err != nil {
-		return fmt.Errorf("failed to initialize database: %w", err)
+		return fmt.Errorf("failed to initialize database: %v", err)
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	if err := db.PingContext(ctx); err != nil {
-		return fmt.Errorf("failed to ping database: %w", err)
+	if err := db.Ping(); err != nil {
+		return fmt.Errorf("failed to ping database: %v", err)
 	}
 
 	log.Println("Connected to the database")

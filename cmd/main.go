@@ -10,7 +10,6 @@ import (
 	"github.com/hojamuhammet/user-admin-grpc-go/internal/config"
 	"github.com/hojamuhammet/user-admin-grpc-go/internal/database"
 	"github.com/hojamuhammet/user-admin-grpc-go/internal/server"
-	"github.com/hojamuhammet/user-admin-grpc-go/internal/service"
 )
 
 func main() {
@@ -33,12 +32,9 @@ func main() {
 	// Create a gRPC server
 	grpcServer := server.NewServer(ctx, cfg)
 
-	// Create a user service instance
-	userSvc := service.NewUserService(cfg)
-
 	// Start the gRPC server
 	go func() {
-		if err := grpcServer.Start(userSvc); err != nil {
+		if err := grpcServer.Start(); err != nil {
 			log.Fatalf("gRPC server failed: %v", err)
 		}
 	}()

@@ -6,3 +6,7 @@ gen
 
 # binaries
 *.exe
+
+go.sum
+
+/vendor/
