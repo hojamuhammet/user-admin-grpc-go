@@ -10,9 +10,13 @@ import (
 	"github.com/hojamuhammet/user-admin-grpc-go/internal/config"
 	"github.com/hojamuhammet/user-admin-grpc-go/internal/database"
 	"github.com/hojamuhammet/user-admin-grpc-go/internal/server"
+	"github.com/joho/godotenv"
 )
 
 func main() {
+	if err := godotenv.Load(); err != nil {
+		log.Fatalf("Error loading .env file")
+	}
 	// Load configuration
 	cfg, err := config.LoadConfig()
 	if err != nil {
