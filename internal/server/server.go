@@ -2,10 +2,13 @@ package server
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"log"
 	"net"
 	"sync"
+
+	_ "github.com/lib/pq"
 
 	pb "github.com/hojamuhammet/user-admin-grpc-go/gen"
 	"github.com/hojamuhammet/user-admin-grpc-go/internal/config"
@@ -19,13 +22,15 @@ type Server struct {
 	cfg *config.Config
 	server *grpc.Server
 	wg sync.WaitGroup
+	db *sql.DB
 	pb.UnimplementedUserServiceServer
 }
 
-func NewServer(ctx context.Context, cfg *config.Config) *Server {
+func NewServer(ctx context.Context, cfg *config.Config, db *sql.DB) *Server {
 	return &Server {
 		ctx: ctx,
 		cfg: cfg,
+		db: db,
 	}
 }
 
@@ -37,7 +42,8 @@ func (s *Server) Start() error {
 
 	s.server = grpc.NewServer()
 
-	pb.RegisterUserServiceServer(s.server, &service.UserService{})
+	userService := service.NewUserService(s.cfg, s.db)
+	pb.RegisterUserServiceServer(s.server, userService)
 
 	reflection.Register(s.server)
 

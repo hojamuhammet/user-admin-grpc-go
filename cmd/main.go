@@ -28,13 +28,14 @@ func main() {
 	defer cancel()
 
 	// Initialize the database connection
-	if err := database.InitDB(cfg); err != nil {
+	db, err := database.InitDB(cfg)
+	if err != nil {
 		log.Fatalf("Failed to initialize the database: %v", err)
 	}
-	defer database.GetDB().Close() // Close the database connection when the program exits
+	defer db.Close() // Close the database connection when the program exits
 
 	// Create a gRPC server
-	grpcServer := server.NewServer(ctx, cfg)
+	grpcServer := server.NewServer(ctx, cfg, db)
 
 	// Start the gRPC server
 	go func() {
