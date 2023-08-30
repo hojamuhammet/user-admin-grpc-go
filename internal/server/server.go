@@ -53,7 +53,6 @@ func (s *Server) Start() error {
 
 func (s *Server) Stop() {
 	if s.server != nil {
-		log.Println("Shutting down gRPC server...")
 		s.server.GracefulStop()
 	}
 }

@@ -54,6 +54,5 @@ func main() {
 	log.Println("gRPC server stopped")
 
 	// Add any additional cleanup logic here
-
 	log.Println("Application gracefully terminated")
 }
