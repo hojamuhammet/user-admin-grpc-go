@@ -14,24 +14,25 @@ import (
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
-
 type UserService struct {
 	cfg *config.Config
 	db *sql.DB
 	pb.UnimplementedUserServiceServer
 }
 
+// NewUserService creates a new instance of UserService with the provided configuration and database connection.
 func NewUserService(cfg *config.Config, db *sql.DB) pb.UserServiceServer {
-    return &UserService{cfg: cfg,
-		db: db}
-
+    return &UserService{cfg: cfg, db: db}
 }
 
+// RegisterService registers the UserService with a gRPC server.
 func (us *UserService) RegisterService(server *grpc.Server) {
 	pb.RegisterUserServiceServer(server, us)
 }
 
+// GetAllUsers retrieves a list of all users from the database.
 func (us *UserService) GetAllUsers(ctx context.Context, empty *pb.Empty) (*pb.UsersList, error) {
+    // Execute a SQL query to select user data from the database
 	rows, err := us.db.QueryContext(ctx, "SELECT id, first_name, last_name, phone_number, blocked, registration_date FROM users")
     if err != nil {
         log.Printf("Error querying database: %v", err)
@@ -41,26 +42,33 @@ func (us *UserService) GetAllUsers(ctx context.Context, empty *pb.Empty) (*pb.Us
 
     var users []*pb.User
 
+    // Iterate over the rows returned by the query
     for rows.Next() {
         var user pb.User
         var registrationDate pq.NullTime
+
+        // Scan the row data into user and registrationDate
         if err := rows.Scan(&user.Id, &user.FirstName, &user.LastName, &user.PhoneNumber, &user.Blocked, &registrationDate); err != nil {
             log.Printf("Error scanning rows: %v", err)
             return nil, status.Errorf(codes.Internal, "Internal server error")
         }
 
+        // If registrationDate is valid, convert it to a protobuf Timestamp
         if registrationDate.Valid {
             user.RegistrationDate = timestamppb.New(registrationDate.Time)
         }
 
+        // Append the user to the list of users
         users = append(users, &user)
     }
 
+    // Check for any errors that occurred during iteration
     if err := rows.Err(); err != nil {
         log.Printf("Error iterating over rows: %v", err)
         return nil, status.Errorf(codes.Internal, "Internal server error")
     }
 
+    // Return the list of users as a UsersList response
     return &pb.UsersList{Users: users}, nil
 }
 
