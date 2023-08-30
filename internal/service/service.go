@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"log"
 
 	pb "github.com/hojamuhammet/user-admin-grpc-go/gen"
@@ -61,4 +62,198 @@ func (us *UserService) GetAllUsers(ctx context.Context, empty *pb.Empty) (*pb.Us
     }
 
     return &pb.UsersList{Users: users}, nil
+}
+
+func (us *UserService) GetUserById(ctx context.Context, req *pb.UserID) (*pb.User, error) {
+    // Query to retrieve user by ID
+    query := "SELECT id, first_name, last_name, phone_number, blocked, registration_date FROM users WHERE id = $1"
+
+    // Variables to store user details
+    var user pb.User
+    var registrationDate pq.NullTime
+
+    // Execute the query with the user's ID
+    err := us.db.QueryRowContext(ctx, query, req.Id).Scan(
+        &user.Id,
+        &user.FirstName,
+        &user.LastName,
+        &user.PhoneNumber,
+        &user.Blocked,
+        &registrationDate, // Scan registration_date as pq.NullTime
+    )
+    if err != nil {
+        if err == sql.ErrNoRows {
+            return nil, status.Errorf(codes.NotFound, "User not found")
+        }
+        log.Printf("Error fetching user by ID: %v", err)
+        return nil, status.Errorf(codes.Internal, "Internal server error")
+    }
+
+    // Check if registrationDate is NULL in the database
+    if registrationDate.Valid {
+        // Assign the registrationDate directly to user.RegistrationDate
+        user.RegistrationDate = timestamppb.New(registrationDate.Time)
+    } else {
+        user.RegistrationDate = nil // Set RegistrationDate to nil in the protobuf message
+    }
+
+    return &user, nil
+}
+
+func (us *UserService) CreateUser(ctx context.Context, req *pb.CreateUserRequest) (*pb.User, error) {
+    // Extract user creation data from req
+    firstName := req.FirstName
+    lastName := req.LastName
+    phoneNumber := req.PhoneNumber
+
+    // Insert the new user into the database, excluding id and registration_date
+    // Here we specify the columns to insert explicitly
+    query := `
+        INSERT INTO users (first_name, last_name, phone_number, blocked)
+        VALUES ($1, $2, $3, $4)
+        RETURNING id, first_name, last_name, phone_number, blocked, registration_date
+    `
+    var user pb.User
+    var registrationDate pq.NullTime
+    err := us.db.QueryRowContext(ctx, query, firstName, lastName, phoneNumber, false).Scan(
+        &user.Id,
+        &user.FirstName,
+        &user.LastName,
+        &user.PhoneNumber,
+        &user.Blocked,
+        &registrationDate,
+    )
+    if err != nil {
+        log.Printf("Error creating user: %v", err)
+        return nil, status.Errorf(codes.Internal, "Internal server error")
+    }
+    
+    if registrationDate.Valid {
+        user.RegistrationDate = timestamppb.New(registrationDate.Time)
+    } else {
+        user.RegistrationDate = nil // Set RegistrationDate to nil in the protobuf message
+    }
+
+    return &user, nil
+}
+
+func (us *UserService) UpdateUser(ctx context.Context, req *pb.UpdateUserRequest) (*pb.User, error) {
+    // Define the SQL query to update user details
+    query := `
+        UPDATE users
+        SET first_name = $2, last_name = $3, phone_number = $4
+        WHERE id = $1
+        RETURNING id, first_name, last_name, phone_number, blocked, registration_date
+    `
+    
+    // Variables to store updated user details
+    var updatedUser pb.User
+    var registrationDate pq.NullTime
+    
+    // Execute the query to update the user's details
+    err := us.db.QueryRowContext(ctx, query, req.Id, req.FirstName, req.LastName, req.PhoneNumber).
+        Scan(
+            &updatedUser.Id,
+            &updatedUser.FirstName,
+            &updatedUser.LastName,
+            &updatedUser.PhoneNumber,
+            &updatedUser.Blocked,
+            &registrationDate, // Scan registration_date as pq.NullTime
+        )
+    
+    if err != nil {
+        if err == sql.ErrNoRows {
+            return nil, status.Errorf(codes.NotFound, "User not found")
+        }
+        log.Printf("Error updating user: %v", err)
+        return nil, status.Errorf(codes.Internal, "Internal server error")
+    }
+    
+    // Check if registrationDate is NULL in the database
+    if registrationDate.Valid {
+        // Assign the registrationDate directly to updatedUser.RegistrationDate
+        updatedUser.RegistrationDate = timestamppb.New(registrationDate.Time)
+    } else {
+        updatedUser.RegistrationDate = nil // Set RegistrationDate to nil in the protobuf message
+    }
+    
+    return &updatedUser, nil
+}
+
+// DeleteUser deletes a user from the database by their ID and returns an empty response.
+func (us *UserService) DeleteUser(ctx context.Context, userID *pb.UserID) (*pb.Empty, error) {
+	log.Printf("Deleting user with ID: %d", userID.Id)
+
+	// Execute a DELETE query with a WHERE clause to remove the user with the given ID.
+	result, err := us.db.Exec("DELETE FROM users WHERE id=$1", userID.Id)
+	if err != nil {
+		log.Printf("Error deleting user: %v", err)
+		return nil, status.Error(codes.Internal, "Failed to delete user")
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		log.Printf("Error getting rows affected: %v", err)
+		return nil, status.Error(codes.Internal, "Failed to delete user")
+	}
+
+	if rowsAffected == 0 {
+		log.Printf("User not found with ID: %d", userID.Id)
+		return nil, status.Error(codes.NotFound, "User not found")
+	}
+
+	log.Printf("User with ID %d successfully deleted", userID.Id)
+	return &pb.Empty{}, nil
+}
+
+
+func (us *UserService) toggleBlockStatus(ctx context.Context, userID *pb.UserID, blocked bool) error {
+	// Execute an UPDATE query with a WHERE clause to set the "blocked" field to the specified status for the given user ID.
+	result, err := us.db.Exec("UPDATE users SET blocked=$1 WHERE id=$2", blocked, userID.Id)
+	if err != nil {
+		log.Printf("Failed to update user status (UserID: %d): %v", userID.Id, err)
+		return status.Error(codes.Internal, "Failed to update user status")
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		log.Printf("Failed to retrieve rows affected (UserID: %d): %v", userID.Id, err)
+		return status.Error(codes.Internal, "Failed to retrieve rows affected")
+	}
+
+	if rowsAffected == 0 {
+		log.Printf("User not found (UserID: %d)", userID.Id)
+		return status.Error(codes.NotFound, fmt.Sprintf("User with ID %d not found", userID.Id))
+	}
+
+	return nil
+}
+
+// BlockUser updates the "blocked" status of a user in the database and returns an empty response.
+func (us *UserService) BlockUser(ctx context.Context, userID *pb.UserID) (*pb.Empty, error) {
+	if err := us.toggleBlockStatus(ctx, userID, true); err != nil {
+		if status.Code(err) == codes.NotFound {
+			log.Printf("User not found: %v", err)
+			return nil, status.Error(codes.NotFound, "User not found")
+		}
+		log.Printf("Internal server error (BlockUser): %v", err)
+		return nil, status.Error(codes.Internal, "Internal server error")
+	}
+
+	log.Printf("User with ID %d successfully blocked", userID.Id)
+	return &pb.Empty{}, nil
+}
+
+// UnblockUser updates the "blocked" status of a user in the database and returns an empty response.
+func (us *UserService) UnblockUser(ctx context.Context, userID *pb.UserID) (*pb.Empty, error) {
+	if err := us.toggleBlockStatus(ctx, userID, false); err != nil {
+		if status.Code(err) == codes.NotFound {
+			return nil, status.Error(codes.NotFound, "User not found")
+		}
+		log.Printf("Internal server error (UnblockUser): %v", err)
+		return nil, status.Error(codes.Internal, "Internal server error")
+	}
+	
+	log.Printf("User with ID %d successfully unblocked", userID.Id)
+	return &pb.Empty{}, nil
 }
