@@ -6,5 +6,3 @@ gen
 
 # binaries
 *.exe
-
-go.sum
