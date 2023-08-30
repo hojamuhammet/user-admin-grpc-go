@@ -205,7 +205,6 @@ func (us *UserService) DeleteUser(ctx context.Context, userID *pb.UserID) (*pb.E
 	return &pb.Empty{}, nil
 }
 
-
 func (us *UserService) toggleBlockStatus(ctx context.Context, userID *pb.UserID, blocked bool) error {
 	// Execute an UPDATE query with a WHERE clause to set the "blocked" field to the specified status for the given user ID.
 	result, err := us.db.Exec("UPDATE users SET blocked=$1 WHERE id=$2", blocked, userID.Id)
@@ -247,6 +246,7 @@ func (us *UserService) BlockUser(ctx context.Context, userID *pb.UserID) (*pb.Em
 func (us *UserService) UnblockUser(ctx context.Context, userID *pb.UserID) (*pb.Empty, error) {
 	if err := us.toggleBlockStatus(ctx, userID, false); err != nil {
 		if status.Code(err) == codes.NotFound {
+			log.Printf("User not found: %v", err)
 			return nil, status.Error(codes.NotFound, "User not found")
 		}
 		log.Printf("Internal server error (UnblockUser): %v", err)
