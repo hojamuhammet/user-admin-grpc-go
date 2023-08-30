@@ -8,5 +8,3 @@ gen
 *.exe
 
 go.sum
-
-/vendor/
