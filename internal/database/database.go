@@ -16,8 +16,6 @@ func InitDB(cfg *config.Config) (*sql.DB, error) {
 	connectionString := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
 	cfg.DBHost, cfg.DBPort, cfg.DBUser, cfg.DBPassword, cfg.DBName)
 
-	log.Printf("Connection String: %s", connectionString)
-
 	var err error
 	db, err = sql.Open("postgres", connectionString)
 	if err != nil {
