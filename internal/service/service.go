@@ -106,8 +106,7 @@ func (us *UserService) CreateUser(ctx context.Context, req *pb.CreateUserRequest
     lastName := req.LastName
     phoneNumber := req.PhoneNumber
 
-    // Insert the new user into the database, excluding id and registration_date
-    // Here we specify the columns to insert explicitly
+    // Insert the new user into the database
     query := `
         INSERT INTO users (first_name, last_name, phone_number, blocked)
         VALUES ($1, $2, $3, $4)
