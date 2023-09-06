@@ -2,61 +2,58 @@ package server
 
 import (
 	"context"
-	"database/sql"
-	"fmt"
 	"log"
 	"net"
 	"sync"
 
-	_ "github.com/lib/pq"
+	"github.com/hojamuhammet/go-grpc-otp-rabbitmq/internal/pkg/config"
 
-	pb "github.com/hojamuhammet/user-admin-grpc-go/gen"
-	"github.com/hojamuhammet/user-admin-grpc-go/internal/config"
-	service "github.com/hojamuhammet/user-admin-grpc-go/internal/service"
+	pb "github.com/hojamuhammet/go-grpc-otp-rabbitmq/gen"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 )
 
+// Server represents your gRPC server.
 type Server struct {
-	ctx context.Context
-	cfg *config.Config
-	server *grpc.Server
-	wg sync.WaitGroup
-	db *sql.DB
+    server *grpc.Server
 	pb.UnimplementedUserServiceServer
+	
 }
 
-func NewServer(ctx context.Context, cfg *config.Config, db *sql.DB) *Server {
-	return &Server {
-		ctx: ctx,
-		cfg: cfg,
-		db: db,
-	}
+// NewServer creates a new instance of the Server.
+func NewServer() *Server {
+    return &Server{}
 }
 
-func (s *Server) Start() error {
-	lis, err := net.Listen("tcp", fmt.Sprintf(":%s", s.cfg.GRPCPort))
-	if err != nil {
-		return err
-	}
+// Start starts the gRPC server.
+func (s *Server) Start(ctx context.Context, cfg *config.Config) error {
+    lis, err := net.Listen("tcp", ":"+cfg.GRPCPort)
+    if err != nil {
+        return err
+    }
 
-	s.server = grpc.NewServer()
+    s.server = grpc.NewServer()
 
-	userService := service.NewUserService(s.cfg, s.db)
-	pb.RegisterUserServiceServer(s.server, userService)
+    // Register any gRPC services here if needed
 
-	reflection.Register(s.server)
+    // Example: pb.RegisterSomeServiceServer(s.server, &someService{})
 
-	log.Printf("gRPC server started on port %s", s.cfg.GRPCPort)
-	return s.server.Serve(lis)
+    reflection.Register(s.server)
+
+    log.Printf("gRPC server started on port %s", cfg.GRPCPort)
+
+    return s.server.Serve(lis)
 }
 
+// Stop stops the gRPC server gracefully.
 func (s *Server) Stop() {
-	if s.server != nil {
-		s.server.GracefulStop()
-	}
+    if s.server != nil {
+        s.server.GracefulStop()
+    }
 }
 
+// Wait waits for the server to finish gracefully.
 func (s *Server) Wait() {
-	s.wg.Wait()
+	var wg sync.WaitGroup
+    wg.Wait()
 }
