@@ -12,6 +12,7 @@ import (
 
 	pb "github.com/hojamuhammet/user-admin-grpc-go/gen"
 	"github.com/hojamuhammet/user-admin-grpc-go/internal/config"
+
 	service "github.com/hojamuhammet/user-admin-grpc-go/internal/service"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
