@@ -21,7 +21,6 @@ type Server struct {
 	ctx context.Context
 	cfg *config.Config
 	server *grpc.Server
-	wg sync.WaitGroup
 	db *sql.DB
 	pb.UnimplementedUserServiceServer
 }
@@ -58,5 +57,6 @@ func (s *Server) Stop() {
 }
 
 func (s *Server) Wait() {
-	s.wg.Wait()
+    var wg sync.WaitGroup
+	wg.Wait()
 }
