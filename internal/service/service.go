@@ -24,7 +24,10 @@ type UserService struct {
 
 // NewUserService creates a new instance of UserService with the provided configuration and database connection.
 func NewUserService(cfg *config.Config, db *sql.DB) pb.UserServiceServer {
-    return &UserService{cfg: cfg, db: db}
+    return &UserService{
+        cfg: cfg, 
+        db: db,
+    }
 }
 
 // RegisterService registers the UserService with a gRPC server.
