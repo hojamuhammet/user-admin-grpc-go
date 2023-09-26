@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"regexp"
 
 	pb "github.com/hojamuhammet/user-admin-grpc-go/gen"
 	"github.com/hojamuhammet/user-admin-grpc-go/internal/config"
@@ -14,6 +15,7 @@ import (
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
+
 type UserService struct {
 	cfg *config.Config
 	db *sql.DB
@@ -29,6 +31,9 @@ func NewUserService(cfg *config.Config, db *sql.DB) pb.UserServiceServer {
 func (us *UserService) RegisterService(server *grpc.Server) {
 	pb.RegisterUserServiceServer(server, us)
 }
+
+// Regular expression pattern for a valid phone number
+var phoneNumberPattern = regexp.MustCompile(`^\+993\d{8}$`)
 
 // GetAllUsers retrieves a list of all users from the database.
 func (us *UserService) GetAllUsers(ctx context.Context, empty *pb.Empty) (*pb.UsersList, error) {
@@ -114,6 +119,11 @@ func (us *UserService) CreateUser(ctx context.Context, req *pb.CreateUserRequest
     lastName := req.LastName
     phoneNumber := req.PhoneNumber
 
+    // Validate the phone number using the regular expression pattern
+    if !phoneNumberPattern.MatchString(phoneNumber) {
+        return nil, status.Errorf(codes.InvalidArgument, "Invalid phone number format")
+    }
+
     // Insert the new user into the database
     query := `
         INSERT INTO users (first_name, last_name, phone_number, blocked)
@@ -145,6 +155,11 @@ func (us *UserService) CreateUser(ctx context.Context, req *pb.CreateUserRequest
 }
 
 func (us *UserService) UpdateUser(ctx context.Context, req *pb.UpdateUserRequest) (*pb.User, error) {
+    // Validate the phone number using the regular expression pattern
+    if !phoneNumberPattern.MatchString(req.PhoneNumber) {
+        return nil, status.Errorf(codes.InvalidArgument, "Invalid phone number format")
+    }
+
     // Define the SQL query to update user details
     query := `
         UPDATE users
