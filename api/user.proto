@@ -13,6 +13,10 @@ message User {
     string phone_number = 4;
     bool blocked = 5;
     google.protobuf.Timestamp registration_date = 6;
+    string gender = 7;
+    google.protobuf.Timestamp date_of_birth = 8;
+    string location = 9;
+    string email = 10;
 }
  
 message UsersList {
@@ -27,6 +31,10 @@ message CreateUserRequest {
     string first_name = 1;
     string last_name = 2;
     string phone_number = 3;
+    string gender = 4;
+    google.protobuf.Timestamp date_of_birth = 5;
+    string location = 6;
+    string email = 7;
 }
 
 message UpdateUserRequest {
@@ -34,6 +42,10 @@ message UpdateUserRequest {
     string first_name = 2;
     string last_name = 3;
     string phone_number = 4;
+    string gender = 7;
+    google.protobuf.Timestamp date_of_birth = 8;
+    string location = 9;
+    string email = 10;
 }
 
 message Empty {}
