@@ -17,6 +17,7 @@ message User {
     google.protobuf.Timestamp date_of_birth = 8;
     string location = 9;
     string email = 10;
+    string profile_photo_url = 11;
 }
  
 message UsersList {
@@ -35,6 +36,7 @@ message CreateUserRequest {
     google.protobuf.Timestamp date_of_birth = 5;
     string location = 6;
     string email = 7;
+    string profile_photo_url = 8;
 }
 
 message UpdateUserRequest {
@@ -46,6 +48,7 @@ message UpdateUserRequest {
     google.protobuf.Timestamp date_of_birth = 8;
     string location = 9;
     string email = 10;
+    string profile_photo_url = 11;
 }
 
 message Empty {}
