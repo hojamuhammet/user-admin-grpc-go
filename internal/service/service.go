@@ -121,6 +121,10 @@ func (us *UserService) CreateUser(ctx context.Context, req *pb.CreateUserRequest
     firstName := req.FirstName
     lastName := req.LastName
     phoneNumber := req.PhoneNumber
+    gender := req.Gender
+    dateOfBirth := req.DateOfBirth
+    location := req.Location
+    email := req.Email
 
     // Validate the phone number using the regular expression pattern
     if !phoneNumberPattern.MatchString(phoneNumber) {
@@ -129,20 +133,25 @@ func (us *UserService) CreateUser(ctx context.Context, req *pb.CreateUserRequest
 
     // Insert the new user into the database
     query := `
-        INSERT INTO users (first_name, last_name, phone_number, blocked)
-        VALUES ($1, $2, $3, $4)
-        RETURNING id, first_name, last_name, phone_number, blocked, registration_date
+        INSERT INTO users (first_name, last_name, phone_number, blocked, gender, date_of_birth, location, email)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        RETURNING id, first_name, last_name, phone_number, blocked, registration_date, gender, date_of_birth, location, email
     `
     var user pb.User
     var registrationDate pq.NullTime
-    err := us.db.QueryRowContext(ctx, query, firstName, lastName, phoneNumber, false).Scan(
+    err := us.db.QueryRowContext(ctx, query, firstName, lastName, phoneNumber, false, gender, dateOfBirth, location, email).Scan(
         &user.Id,
         &user.FirstName,
         &user.LastName,
         &user.PhoneNumber,
         &user.Blocked,
         &registrationDate,
+        &user.Gender,
+        &user.DateOfBirth,
+        &user.Location,
+        &user.Email,
     )
+
     if err != nil {
         log.Printf("Error creating user: %v", err)
         return nil, status.Errorf(codes.Internal, "Internal server error")
