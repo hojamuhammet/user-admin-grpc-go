@@ -5,4 +5,4 @@
 *.exe
 
 # generated files
-gen
+/gen/
