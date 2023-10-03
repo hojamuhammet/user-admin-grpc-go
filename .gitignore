@@ -3,3 +3,5 @@
 
 # binaries
 *.exe
+
+/gen
