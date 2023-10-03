@@ -142,6 +142,7 @@ func (us *UserService) CreateUser(ctx context.Context, req *pb.CreateUserRequest
     dateOfBirth := req.DateOfBirth
     location := req.Location
     email := req.Email
+    profilePhotoUrl := req.ProfilePhotoUrl
 
     // Validate the phone number using the regular expression pattern
     if !phoneNumberPattern.MatchString(phoneNumber) {
@@ -150,13 +151,13 @@ func (us *UserService) CreateUser(ctx context.Context, req *pb.CreateUserRequest
 
     // Insert the new user into the database
     query := `
-        INSERT INTO users (first_name, last_name, phone_number, blocked, gender, date_of_birth, location, email)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-        RETURNING id, first_name, last_name, phone_number, blocked, registration_date, gender, date_of_birth, location, email
+        INSERT INTO users (first_name, last_name, phone_number, blocked, gender, date_of_birth, location, email, profile_photo_url)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+        RETURNING id, first_name, last_name, phone_number, blocked, registration_date, gender, date_of_birth, location, email, profile_photo_url
     `
     var user pb.User
     var registrationDate pq.NullTime
-    err := us.db.QueryRowContext(ctx, query, firstName, lastName, phoneNumber, false, gender, dateOfBirth, location, email).Scan(
+    err := us.db.QueryRowContext(ctx, query, firstName, lastName, phoneNumber, false, gender, dateOfBirth, location, email, profilePhotoUrl).Scan(
         &user.Id,
         &user.FirstName,
         &user.LastName,
@@ -167,6 +168,7 @@ func (us *UserService) CreateUser(ctx context.Context, req *pb.CreateUserRequest
         &user.DateOfBirth,
         &user.Location,
         &user.Email,
+        &user.ProfilePhotoUrl,
     )
 
     if err != nil {
