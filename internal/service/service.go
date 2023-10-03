@@ -41,7 +41,7 @@ var phoneNumberPattern = regexp.MustCompile(`^\+993\d{8}$`)
 // GetAllUsers retrieves a list of all users from the database.
 func (us *UserService) GetAllUsers(ctx context.Context, empty *pb.Empty) (*pb.UsersList, error) {
     // Execute a SQL query to select user data from the database
-	rows, err := us.db.QueryContext(ctx, "SELECT id, first_name, last_name, phone_number, blocked, registration_date FROM users")
+	rows, err := us.db.QueryContext(ctx, "SELECT * FROM users")
     if err != nil {
         log.Printf("Error querying database: %v", err)
         return nil, status.Errorf(codes.Internal, "Internal server error")
@@ -56,7 +56,19 @@ func (us *UserService) GetAllUsers(ctx context.Context, empty *pb.Empty) (*pb.Us
         var registrationDate pq.NullTime
 
         // Scan the row data into user and registrationDate
-        if err := rows.Scan(&user.Id, &user.FirstName, &user.LastName, &user.PhoneNumber, &user.Blocked, &registrationDate); err != nil {
+        if err := rows.Scan(
+            &user.Id, 
+            &user.FirstName, 
+            &user.LastName, 
+            &user.PhoneNumber, 
+            &user.Blocked, 
+            &registrationDate,
+            &user.Gender,
+            &user.DateOfBirth,
+            &user.Location,
+            &user.Email,
+            &user.ProfilePhotoUrl,
+            ); err != nil {
             log.Printf("Error scanning rows: %v", err)
             return nil, status.Errorf(codes.Internal, "Internal server error")
         }
@@ -82,7 +94,7 @@ func (us *UserService) GetAllUsers(ctx context.Context, empty *pb.Empty) (*pb.Us
 
 func (us *UserService) GetUserById(ctx context.Context, req *pb.UserID) (*pb.User, error) {
     // Query to retrieve user by ID
-    query := "SELECT id, first_name, last_name, phone_number, blocked, registration_date FROM users WHERE id = $1"
+    query := "SELECT * FROM users WHERE id = $1"
 
     // Variables to store user details
     var user pb.User
@@ -96,6 +108,11 @@ func (us *UserService) GetUserById(ctx context.Context, req *pb.UserID) (*pb.Use
         &user.PhoneNumber,
         &user.Blocked,
         &registrationDate, // Scan registration_date as pq.NullTime
+        &user.Gender,
+        &user.DateOfBirth,
+        &user.Location,
+        &user.Email,
+        &user.ProfilePhotoUrl,
     )
     if err != nil {
         if err == sql.ErrNoRows {
