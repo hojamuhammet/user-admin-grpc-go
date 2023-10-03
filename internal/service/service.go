@@ -41,7 +41,7 @@ var phoneNumberPattern = regexp.MustCompile(`^\+993\d{8}$`)
 // GetAllUsers retrieves a list of all users from the database.
 func (us *UserService) GetAllUsers(ctx context.Context, empty *pb.Empty) (*pb.UsersList, error) {
     // Execute a SQL query to select user data from the database
-	rows, err := us.db.QueryContext(ctx, "SELECT * FROM users")
+	rows, err := us.db.QueryContext(ctx, "SELECT id, first_name, last_name, phone_number, blocked, registration_date, gender, date_of_birth, location, email, profile_photo_url FROM users")
     if err != nil {
         log.Printf("Error querying database: %v", err)
         return nil, status.Errorf(codes.Internal, "Internal server error")
@@ -94,7 +94,7 @@ func (us *UserService) GetAllUsers(ctx context.Context, empty *pb.Empty) (*pb.Us
 
 func (us *UserService) GetUserById(ctx context.Context, req *pb.UserID) (*pb.User, error) {
     // Query to retrieve user by ID
-    query := "SELECT * FROM users WHERE id = $1"
+    query := "SELECT id, first_name, last_name, phone_number, blocked, registration_date, gender, date_of_birth, location, email, profile_photo_url FROM users WHERE id = $1"
 
     // Variables to store user details
     var user pb.User
@@ -142,28 +142,32 @@ func (us *UserService) CreateUser(ctx context.Context, req *pb.CreateUserRequest
     location := req.Location
     email := req.Email
     profilePhotoUrl := req.ProfilePhotoUrl
+    dateOfBirth := req.DateOfBirth // This field is already of type google.type.Date
 
     // Validate the phone number using the regular expression pattern
     if !phoneNumberPattern.MatchString(phoneNumber) {
         return nil, status.Errorf(codes.InvalidArgument, "Invalid phone number format")
     }
 
+    // Converting google.type.Date to a string in the format "YYYY-MM-DD"
+    dateOfBirthStr := fmt.Sprintf("%04d-%02d-%02d", dateOfBirth.Year, dateOfBirth.Month, dateOfBirth.Day)
+
+
     // Insert the new user into the database
     query := `
         INSERT INTO users (first_name, last_name, phone_number, blocked, gender, date_of_birth, location, email, profile_photo_url)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+        VALUES ($1, $2, $3, $4, $5, $6::DATE, $7, $8, $9)
         RETURNING id, first_name, last_name, phone_number, blocked, gender, date_of_birth, location, email, profile_photo_url
     `
     var user pb.User
-    var dateOfBirth pq.NullTime
-    err := us.db.QueryRowContext(ctx, query, firstName, lastName, phoneNumber, false, gender, dateOfBirth, location, email, profilePhotoUrl).Scan(
+    err := us.db.QueryRowContext(ctx, query, firstName, lastName, phoneNumber, false, gender, dateOfBirthStr, location, email, profilePhotoUrl).Scan(
         &user.Id,
         &user.FirstName,
         &user.LastName,
         &user.PhoneNumber,
         &user.Blocked,
         &user.Gender,
-        &dateOfBirth,
+        &dateOfBirthStr,
         &user.Location,
         &user.Email,
         &user.ProfilePhotoUrl,
@@ -173,13 +177,6 @@ func (us *UserService) CreateUser(ctx context.Context, req *pb.CreateUserRequest
         log.Printf("Error creating user: %v", err)
         return nil, status.Errorf(codes.Internal, "Internal server error")
     }
-    
-    if dateOfBirth.Valid {
-        user.DateOfBirth = timestamppb.New(dateOfBirth.Time)
-    } else {
-        user.DateOfBirth = nil // Set RegistrationDate to nil in the protobuf message
-    }
-
     return &user, nil
 }
 
