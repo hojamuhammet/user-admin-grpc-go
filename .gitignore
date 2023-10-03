@@ -4,4 +4,4 @@
 # binaries
 *.exe
 
-/gen
+gen
