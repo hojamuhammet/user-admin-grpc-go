@@ -139,7 +139,6 @@ func (us *UserService) CreateUser(ctx context.Context, req *pb.CreateUserRequest
     lastName := req.LastName
     phoneNumber := req.PhoneNumber
     gender := req.Gender
-    dateOfBirth := req.DateOfBirth
     location := req.Location
     email := req.Email
     profilePhotoUrl := req.ProfilePhotoUrl
@@ -153,19 +152,18 @@ func (us *UserService) CreateUser(ctx context.Context, req *pb.CreateUserRequest
     query := `
         INSERT INTO users (first_name, last_name, phone_number, blocked, gender, date_of_birth, location, email, profile_photo_url)
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-        RETURNING id, first_name, last_name, phone_number, blocked, registration_date, gender, date_of_birth, location, email, profile_photo_url
+        RETURNING id, first_name, last_name, phone_number, blocked, gender, date_of_birth, location, email, profile_photo_url
     `
     var user pb.User
-    var registrationDate pq.NullTime
+    var dateOfBirth pq.NullTime
     err := us.db.QueryRowContext(ctx, query, firstName, lastName, phoneNumber, false, gender, dateOfBirth, location, email, profilePhotoUrl).Scan(
         &user.Id,
         &user.FirstName,
         &user.LastName,
         &user.PhoneNumber,
         &user.Blocked,
-        &registrationDate,
         &user.Gender,
-        &user.DateOfBirth,
+        &dateOfBirth,
         &user.Location,
         &user.Email,
         &user.ProfilePhotoUrl,
@@ -176,10 +174,10 @@ func (us *UserService) CreateUser(ctx context.Context, req *pb.CreateUserRequest
         return nil, status.Errorf(codes.Internal, "Internal server error")
     }
     
-    if registrationDate.Valid {
-        user.RegistrationDate = timestamppb.New(registrationDate.Time)
+    if dateOfBirth.Valid {
+        user.DateOfBirth = timestamppb.New(dateOfBirth.Time)
     } else {
-        user.RegistrationDate = nil // Set RegistrationDate to nil in the protobuf message
+        user.DateOfBirth = nil // Set RegistrationDate to nil in the protobuf message
     }
 
     return &user, nil
@@ -191,12 +189,12 @@ func (us *UserService) UpdateUser(ctx context.Context, req *pb.UpdateUserRequest
         return nil, status.Errorf(codes.InvalidArgument, "Invalid phone number format")
     }
 
-    // Define the SQL query to update user details
+    // Define the SQL query to update user details, including the profile_photo_url
     query := `
         UPDATE users
-        SET first_name = $2, last_name = $3, phone_number = $4
+        SET first_name = $2, last_name = $3, phone_number = $4, gender = $5, date_of_birth = $6, location = $7, email = $8, profile_photo_url = $9
         WHERE id = $1
-        RETURNING id, first_name, last_name, phone_number, blocked, registration_date
+        RETURNING id, first_name, last_name, phone_number, blocked, gender, date_of_birth, location, email, profile_photo_url
     `
     
     // Variables to store updated user details
@@ -204,7 +202,7 @@ func (us *UserService) UpdateUser(ctx context.Context, req *pb.UpdateUserRequest
     var registrationDate pq.NullTime
     
     // Execute the query to update the user's details
-    err := us.db.QueryRowContext(ctx, query, req.Id, req.FirstName, req.LastName, req.PhoneNumber).
+    err := us.db.QueryRowContext(ctx, query, req.Id, req.FirstName, req.LastName, req.PhoneNumber, req.Gender, req.DateOfBirth, req.Location, req.Email, req.ProfilePhotoUrl).
         Scan(
             &updatedUser.Id,
             &updatedUser.FirstName,
@@ -212,6 +210,11 @@ func (us *UserService) UpdateUser(ctx context.Context, req *pb.UpdateUserRequest
             &updatedUser.PhoneNumber,
             &updatedUser.Blocked,
             &registrationDate, // Scan registration_date as pq.NullTime
+            &updatedUser.Gender,
+            &updatedUser.DateOfBirth,
+            &updatedUser.Location,
+            &updatedUser.Email,
+            &updatedUser.ProfilePhotoUrl,
         )
     
     if err != nil {
