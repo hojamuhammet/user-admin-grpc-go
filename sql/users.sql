@@ -10,5 +10,6 @@ CREATE TABLE users (
     gender VARCHAR(10),
     date_of_birth DATE,
     location VARCHAR(100),
-    email VARCHAR(100) UNIQUE
+    email VARCHAR(100) UNIQUE,
+    profile_photo_url VARCHAR(255)
 );
