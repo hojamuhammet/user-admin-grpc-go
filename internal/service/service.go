@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"regexp"
+	"time"
 
 	pb "github.com/hojamuhammet/user-admin-grpc-go/gen"
 	"github.com/hojamuhammet/user-admin-grpc-go/internal/config"
@@ -41,8 +42,9 @@ var phoneNumberPattern = regexp.MustCompile(`^\+993\d{8}$`)
 // GetAllUsers retrieves a list of all users from the database.
 func (us *UserService) GetAllUsers(ctx context.Context, empty *pb.Empty) (*pb.UsersList, error) {
     // Execute a SQL query to select user data from the database
-	rows, err := us.db.QueryContext(ctx, "SELECT id, first_name, last_name, phone_number, blocked, registration_date, gender, date_of_birth, location, email, profile_photo_url FROM users")
+    rows, err := us.db.QueryContext(ctx, "SELECT id, first_name, last_name, phone_number, blocked, registration_date, gender, date_of_birth, location, email, profile_photo_url FROM users")
     if err != nil {
+        // Log the error and return an internal server error status
         log.Printf("Error querying database: %v", err)
         return nil, status.Errorf(codes.Internal, "Internal server error")
     }
@@ -54,6 +56,7 @@ func (us *UserService) GetAllUsers(ctx context.Context, empty *pb.Empty) (*pb.Us
     for rows.Next() {
         var user pb.User
         var registrationDate pq.NullTime
+        var dateOfBirthStr string
 
         // Scan the row data into user and registrationDate
         if err := rows.Scan(
@@ -64,11 +67,12 @@ func (us *UserService) GetAllUsers(ctx context.Context, empty *pb.Empty) (*pb.Us
             &user.Blocked, 
             &registrationDate,
             &user.Gender,
-            &user.DateOfBirth,
+            &dateOfBirthStr,
             &user.Location,
             &user.Email,
             &user.ProfilePhotoUrl,
-            ); err != nil {
+        ); err != nil {
+            // Log the error and return an internal server error status
             log.Printf("Error scanning rows: %v", err)
             return nil, status.Errorf(codes.Internal, "Internal server error")
         }
@@ -78,12 +82,31 @@ func (us *UserService) GetAllUsers(ctx context.Context, empty *pb.Empty) (*pb.Us
             user.RegistrationDate = timestamppb.New(registrationDate.Time)
         }
 
+        // Extract the date portion of the dateOfBirthStr (YYYY-MM-DD)
+        dateOfBirthStr = dateOfBirthStr[:10] // This removes the "T00:00:00Z" part
+
+        // Parse the dateOfBirthStr into a time.Time
+        dateOfBirthTime, err := time.Parse("2006-01-02", dateOfBirthStr)
+        if err != nil {
+            // Log the error and return an internal server error status
+            log.Printf("Error parsing date: %v", err)
+            return nil, status.Errorf(codes.Internal, "Internal server error")
+        }
+
+        // Convert the dateOfBirthTime into a pb.DateOfBirth message
+        user.DateOfBirth = &pb.DateOfBirth{
+            Year:  int32(dateOfBirthTime.Year()),
+            Month: int32(dateOfBirthTime.Month()),
+            Day:   int32(dateOfBirthTime.Day()),
+        }
+
         // Append the user to the list of users
         users = append(users, &user)
     }
 
     // Check for any errors that occurred during iteration
     if err := rows.Err(); err != nil {
+        // Log the error and return an internal server error status
         log.Printf("Error iterating over rows: %v", err)
         return nil, status.Errorf(codes.Internal, "Internal server error")
     }
@@ -91,6 +114,7 @@ func (us *UserService) GetAllUsers(ctx context.Context, empty *pb.Empty) (*pb.Us
     // Return the list of users as a UsersList response
     return &pb.UsersList{Users: users}, nil
 }
+
 
 func (us *UserService) GetUserById(ctx context.Context, req *pb.UserID) (*pb.User, error) {
     // Query to retrieve user by ID
