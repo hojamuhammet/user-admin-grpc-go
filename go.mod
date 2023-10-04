@@ -5,7 +5,6 @@ go 1.19
 require (
 	github.com/joho/godotenv v1.5.1
 	github.com/lib/pq v1.10.9
-	google.golang.org/genproto v0.0.0-20231002182017-d307bd883b97
 	google.golang.org/grpc v1.57.0
 	google.golang.org/protobuf v1.31.0
 )
