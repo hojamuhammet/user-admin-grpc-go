@@ -13,6 +13,5 @@ CREATE TABLE users (
     email VARCHAR(100) UNIQUE,
     profile_photo_url VARCHAR(255)
     -- Add a partial unique index for non-null email values
-    CREATE UNIQUE INDEX email_unique_idx ON users (email) WHERE email IS NOT NULL;
-
+    CONSTRAINT email_unique_idx UNIQUE (email) WHERE (email IS NOT NULL)
 );
