@@ -4,12 +4,14 @@ CREATE TABLE users (
     last_name VARCHAR(30),
     phone_number VARCHAR(12) NOT NULL UNIQUE,
     blocked BOOLEAN NOT NULL DEFAULT false,
-    registration_date TIMESTAMP DEFAULT TO_TIMESTAMP(TO_CHAR(CURRENT_TIMESTAMP, 'DD-MM-YYYY HH24:MI:SS'), 'DD-MM-YYYY HH24:MI:SS'),
+    registration_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     otp VARCHAR(6) UNIQUE,
-    otp_created_at TIMESTAMP DEFAULT TO_TIMESTAMP(TO_CHAR(CURRENT_TIMESTAMP, 'DD-MM-YYYY HH24:MI:SS'), 'DD-MM-YYYY HH24:MI:SS'),
+    otp_created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     gender VARCHAR(10),
     date_of_birth DATE,
     location VARCHAR(100),
     email VARCHAR(100) UNIQUE,
     profile_photo_url VARCHAR(255)
+    -- Add a partial unique index for non-null email values
+    CONSTRAINT email_unique_idx UNIQUE (email) WHERE email IS NOT NULL
 );
