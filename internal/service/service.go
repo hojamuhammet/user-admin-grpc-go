@@ -228,6 +228,9 @@ func (us *UserService) UpdateUser(ctx context.Context, req *pb.UpdateUserRequest
         return nil, status.Errorf(codes.InvalidArgument, "Invalid phone number format")
     }
 
+    // Format the dateOfBirth as a string in the format "YYYY-MM-DD"
+    dateOfBirthStr := fmt.Sprintf("%04d-%02d-%02d", req.DateOfBirth.Year, req.DateOfBirth.Month, req.DateOfBirth.Day)
+
     // Define the SQL query to update user details, including the profile_photo_url
     query := `
         UPDATE users
@@ -241,16 +244,15 @@ func (us *UserService) UpdateUser(ctx context.Context, req *pb.UpdateUserRequest
     var registrationDate pq.NullTime
     
     // Execute the query to update the user's details
-    err := us.db.QueryRowContext(ctx, query, req.Id, req.FirstName, req.LastName, req.PhoneNumber, req.Gender, req.DateOfBirth, req.Location, req.Email, req.ProfilePhotoUrl).
+    err := us.db.QueryRowContext(ctx, query, req.Id, req.FirstName, req.LastName, req.PhoneNumber, req.Gender, dateOfBirthStr, req.Location, req.Email, req.ProfilePhotoUrl).
         Scan(
             &updatedUser.Id,
             &updatedUser.FirstName,
             &updatedUser.LastName,
             &updatedUser.PhoneNumber,
             &updatedUser.Blocked,
-            &registrationDate, // Scan registration_date as pq.NullTime
             &updatedUser.Gender,
-            &updatedUser.DateOfBirth,
+            &dateOfBirthStr, // Scan date_of_birth as a string
             &updatedUser.Location,
             &updatedUser.Email,
             &updatedUser.ProfilePhotoUrl,
@@ -274,6 +276,7 @@ func (us *UserService) UpdateUser(ctx context.Context, req *pb.UpdateUserRequest
     
     return &updatedUser, nil
 }
+
 
 // DeleteUser deletes a user from the database by their ID and returns an empty response.
 func (us *UserService) DeleteUser(ctx context.Context, userID *pb.UserID) (*pb.Empty, error) {
