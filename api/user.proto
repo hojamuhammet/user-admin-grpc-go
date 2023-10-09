@@ -25,7 +25,7 @@ message User {
     string email = 10;
     string profile_photo_url = 11;
 }
- 
+
 message UsersList {
     repeated User users = 1;
 }
@@ -60,10 +60,10 @@ message UpdateUserRequest {
 message Empty {}
 
 service UserService {
-    rpc GetAllUsers (Empty) returns (UsersList) {}
-    rpc GetUserById (UserID) returns (User) {}
-    rpc CreateUser (CreateUserRequest) returns (User) {}
-    rpc UpdateUser (UpdateUserRequest) returns (User) {}
+    rpc GetAllUsers (Empty) returns (UsersList);
+    rpc GetUserById (UserID) returns (User);
+    rpc CreateUser (CreateUserRequest) returns (User);
+    rpc UpdateUser (UpdateUserRequest) returns (User);
     rpc DeleteUser (UserID) returns (Empty) {}
     rpc BlockUser (UserID) returns (Empty) {}
     rpc UnblockUser(UserID) returns (Empty) {}
