@@ -123,6 +123,7 @@ func (us *UserService) GetUserById(ctx context.Context, req *pb.UserID) (*pb.Use
     // Variables to store user details
     var user pb.User
     var registrationDate pq.NullTime
+    var dateOfBirthStr string
 
     // Execute the query with the user's ID
     err := us.db.QueryRowContext(ctx, query, req.Id).Scan(
@@ -133,7 +134,7 @@ func (us *UserService) GetUserById(ctx context.Context, req *pb.UserID) (*pb.Use
         &user.Blocked,
         &registrationDate, // Scan registration_date as pq.NullTime
         &user.Gender,
-        &user.DateOfBirth,
+        &dateOfBirthStr,
         &user.Location,
         &user.Email,
         &user.ProfilePhotoUrl,
@@ -153,6 +154,23 @@ func (us *UserService) GetUserById(ctx context.Context, req *pb.UserID) (*pb.Use
     } else {
         user.RegistrationDate = nil // Set RegistrationDate to nil in the protobuf message
     }
+
+     // Extract the date portion of the dateOfBirthStr (YYYY-MM-DD)
+     dateOfBirthStr = dateOfBirthStr[:10] // This removes the "T00:00:00Z" part
+
+     // Parse the dateOfBirthStr into a time.Time
+     dateOfBirthTime, err := time.Parse("2006-01-02", dateOfBirthStr)
+     if err != nil {
+         log.Printf("Error parsing date: %v", err)
+         return nil, status.Errorf(codes.Internal, "Internal server error")
+     }
+ 
+     // Convert the dateOfBirthTime into a pb.DateOfBirth message
+     user.DateOfBirth = &pb.DateOfBirth{
+         Year:  int32(dateOfBirthTime.Year()),
+         Month: int32(dateOfBirthTime.Month()),
+         Day:   int32(dateOfBirthTime.Day()),
+     }
 
     return &user, nil
 }
