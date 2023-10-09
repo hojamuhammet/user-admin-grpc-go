@@ -55,7 +55,7 @@ func (us *UserService) GetAllUsers(ctx context.Context, empty *pb.Empty) (*pb.Us
     // Iterate over the rows returned by the query
     for rows.Next() {
         var user pb.User
-        var registrationDate pq.NullTime
+        var registrationTime time.Time
         var dateOfBirthStr string
 
         // Scan the row data into user and registrationDate
@@ -65,7 +65,7 @@ func (us *UserService) GetAllUsers(ctx context.Context, empty *pb.Empty) (*pb.Us
             &user.LastName, 
             &user.PhoneNumber, 
             &user.Blocked, 
-            &registrationDate,
+            &registrationTime,
             &user.Gender,
             &dateOfBirthStr,
             &user.Location,
@@ -77,10 +77,8 @@ func (us *UserService) GetAllUsers(ctx context.Context, empty *pb.Empty) (*pb.Us
             return nil, status.Errorf(codes.Internal, "Internal server error")
         }
 
-        // If registrationDate is valid, convert it to a protobuf Timestamp
-        if registrationDate.Valid {
-            user.RegistrationDate = timestamppb.New(registrationDate.Time)
-        }
+        // Assign registrationTimestamp directly to user.RegistrationDate
+        user.RegistrationDate = timestamppb.New(registrationTime)
 
         // Extract the date portion of the dateOfBirthStr (YYYY-MM-DD)
         dateOfBirthStr = dateOfBirthStr[:10] // This removes the "T00:00:00Z" part
@@ -184,24 +182,23 @@ func (us *UserService) CreateUser(ctx context.Context, req *pb.CreateUserRequest
     location := req.Location
     email := req.Email
     profilePhotoUrl := req.ProfilePhotoUrl
-    dateOfBirth := req.DateOfBirth // This field is already of type google.type.Date
+    dateOfBirthStr := fmt.Sprintf("%04d-%02d-%02d", req.DateOfBirth.Year, req.DateOfBirth.Month, req.DateOfBirth.Day)
 
     // Validate the phone number using the regular expression pattern
     if !phoneNumberPattern.MatchString(phoneNumber) {
         return nil, status.Errorf(codes.InvalidArgument, "Invalid phone number format")
     }
 
-    // Converting google.type.Date to a string in the format "YYYY-MM-DD"
-    dateOfBirthStr := fmt.Sprintf("%04d-%02d-%02d", dateOfBirth.Year, dateOfBirth.Month, dateOfBirth.Day)
+    var dateOfBirthTime time.Time
 
-
-    // Insert the new user into the database
+    // Insert the new user into the database without registration_date
     query := `
         INSERT INTO users (first_name, last_name, phone_number, blocked, gender, date_of_birth, location, email, profile_photo_url)
-        VALUES ($1, $2, $3, $4, $5, $6::DATE, $7, $8, $9)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
         RETURNING id, first_name, last_name, phone_number, blocked, gender, date_of_birth, location, email, profile_photo_url
     `
     var user pb.User
+
     err := us.db.QueryRowContext(ctx, query, firstName, lastName, phoneNumber, false, gender, dateOfBirthStr, location, email, profilePhotoUrl).Scan(
         &user.Id,
         &user.FirstName,
@@ -209,7 +206,7 @@ func (us *UserService) CreateUser(ctx context.Context, req *pb.CreateUserRequest
         &user.PhoneNumber,
         &user.Blocked,
         &user.Gender,
-        &dateOfBirthStr,
+        &dateOfBirthTime, // This value is not modified before Scan
         &user.Location,
         &user.Email,
         &user.ProfilePhotoUrl,
@@ -219,6 +216,14 @@ func (us *UserService) CreateUser(ctx context.Context, req *pb.CreateUserRequest
         log.Printf("Error creating user: %v", err)
         return nil, status.Errorf(codes.Internal, "Internal server error")
     }
+
+    // Convert the time.Time value to your custom DateOfBirth type
+    user.DateOfBirth = &pb.DateOfBirth{
+        Year:  int32(dateOfBirthTime.Year()),
+        Month: int32(dateOfBirthTime.Month()),
+        Day:   int32(dateOfBirthTime.Day()),
+    }
+
     return &user, nil
 }
 
