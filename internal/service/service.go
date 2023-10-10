@@ -50,11 +50,11 @@ func (us *UserService) GetAllUsers(ctx context.Context, empty *pb.Empty) (*pb.Us
     }
     defer rows.Close()
 
-    var users []*pb.User
+    var users []*pb.GetUserResponse
 
     // Iterate over the rows returned by the query
     for rows.Next() {
-        var user pb.User
+        var user pb.GetUserResponse
         var registrationTime time.Time
         var dateOfBirthStr string
 
@@ -114,12 +114,12 @@ func (us *UserService) GetAllUsers(ctx context.Context, empty *pb.Empty) (*pb.Us
 }
 
 
-func (us *UserService) GetUserById(ctx context.Context, req *pb.UserID) (*pb.User, error) {
+func (us *UserService) GetUserById(ctx context.Context, req *pb.UserID) (*pb.GetUserResponse, error) {
     // Query to retrieve user by ID
     query := "SELECT id, first_name, last_name, phone_number, blocked, registration_date, gender, date_of_birth, location, email, profile_photo_url FROM users WHERE id = $1"
 
     // Variables to store user details
-    var user pb.User
+    var user pb.GetUserResponse
     var registrationDate pq.NullTime
     var dateOfBirthStr string
 
@@ -173,7 +173,7 @@ func (us *UserService) GetUserById(ctx context.Context, req *pb.UserID) (*pb.Use
     return &user, nil
 }
 
-func (us *UserService) CreateUser(ctx context.Context, req *pb.CreateUserRequest) (*pb.User, error) {
+func (us *UserService) CreateUser(ctx context.Context, req *pb.CreateUserRequest) (*pb.CreateUserResponse, error) {
     // Extract user creation data from req
     firstName := req.FirstName
     lastName := req.LastName
@@ -195,13 +195,12 @@ func (us *UserService) CreateUser(ctx context.Context, req *pb.CreateUserRequest
         dateOfBirthTime.Valid = true
     }
 
-    // Insert the new user into the database without registration_date
     query := `
         INSERT INTO users (first_name, last_name, phone_number, blocked, gender, date_of_birth, location, email, profile_photo_url)
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
         RETURNING id, first_name, last_name, phone_number, blocked, gender, date_of_birth, location, email, profile_photo_url
     `
-    var user pb.User
+    var user pb.CreateUserResponse
 
     err := us.db.QueryRowContext(ctx, query, firstName, lastName, phoneNumber, false, gender, dateOfBirthTime, location, email, profilePhotoUrl).Scan(
         &user.Id,
@@ -236,7 +235,7 @@ func (us *UserService) CreateUser(ctx context.Context, req *pb.CreateUserRequest
     return &user, nil
 }
 
-func (us *UserService) UpdateUser(ctx context.Context, req *pb.UpdateUserRequest) (*pb.User, error) {
+func (us *UserService) UpdateUser(ctx context.Context, req *pb.UpdateUserRequest) (*pb.UpdateUserResponse, error) {
     // Validate the phone number using the regular expression pattern
     if !phoneNumberPattern.MatchString(req.PhoneNumber) {
         return nil, status.Errorf(codes.InvalidArgument, "Invalid phone number format")
@@ -254,8 +253,7 @@ func (us *UserService) UpdateUser(ctx context.Context, req *pb.UpdateUserRequest
     `
     
     // Variables to store updated user details
-    var updatedUser pb.User
-    var registrationDate pq.NullTime
+    var updatedUser pb.UpdateUserResponse
     
     // Execute the query to update the user's details
     err := us.db.QueryRowContext(ctx, query, req.Id, req.FirstName, req.LastName, req.PhoneNumber, req.Gender, dateOfBirthStr, req.Location, req.Email, req.ProfilePhotoUrl).
@@ -264,7 +262,6 @@ func (us *UserService) UpdateUser(ctx context.Context, req *pb.UpdateUserRequest
             &updatedUser.FirstName,
             &updatedUser.LastName,
             &updatedUser.PhoneNumber,
-            &updatedUser.Blocked,
             &updatedUser.Gender,
             &dateOfBirthStr, // Scan date_of_birth as a string
             &updatedUser.Location,
@@ -280,17 +277,8 @@ func (us *UserService) UpdateUser(ctx context.Context, req *pb.UpdateUserRequest
         return nil, status.Errorf(codes.Internal, "Internal server error")
     }
     
-    // Check if registrationDate is NULL in the database
-    if registrationDate.Valid {
-        // Assign the registrationDate directly to updatedUser.RegistrationDate
-        updatedUser.RegistrationDate = timestamppb.New(registrationDate.Time)
-    } else {
-        updatedUser.RegistrationDate = nil // Set RegistrationDate to nil in the protobuf message
-    }
-    
     return &updatedUser, nil
 }
-
 
 // DeleteUser deletes a user from the database by their ID and returns an empty response.
 func (us *UserService) DeleteUser(ctx context.Context, userID *pb.UserID) (*pb.Empty, error) {
