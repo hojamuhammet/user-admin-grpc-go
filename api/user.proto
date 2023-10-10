@@ -12,22 +12,8 @@ message DateOfBirth {
     int32 day = 3;
 }
 
-message User {
-    int32 id = 1;
-    string first_name = 2;
-    string last_name = 3;
-    string phone_number = 4;
-    bool blocked = 5;
-    google.protobuf.Timestamp registration_date = 6;
-    string gender = 7;
-    DateOfBirth date_of_birth = 8;
-    string location = 9;
-    string email = 10;
-    string profile_photo_url = 11;
-}
-
 message UsersList {
-    repeated User users = 1;
+    repeated GetUserResponse users = 1;
 }
 
 message UserID {
@@ -50,6 +36,20 @@ message UpdateUserRequest {
     string first_name = 2;
     string last_name = 3;
     string phone_number = 4;
+    string gender = 5;
+    DateOfBirth date_of_birth = 6;
+    string location = 7;
+    string email =8 ;
+    string profile_photo_url = 9;
+}
+
+message GetUserResponse {
+    int32 id = 1;
+    string first_name = 2;
+    string last_name = 3;
+    string phone_number = 4;
+    bool blocked = 5;
+    google.protobuf.Timestamp registration_date = 6;
     string gender = 7;
     DateOfBirth date_of_birth = 8;
     string location = 9;
@@ -57,13 +57,39 @@ message UpdateUserRequest {
     string profile_photo_url = 11;
 }
 
+message CreateUserResponse {
+    int32 id = 1;
+    string first_name = 2;
+    string last_name = 3;
+    string phone_number = 4;
+    bool blocked = 5;
+    string gender = 6;
+    DateOfBirth date_of_birth = 7;
+    string location = 8;
+    string email = 9;
+    string profile_photo_url = 10;
+}
+
+message UpdateUserResponse {
+    int32 id = 1;
+    string first_name = 2;
+    string last_name = 3;
+    string phone_number = 4;
+    bool blocked = 5;
+    string gender = 6;
+    DateOfBirth date_of_birth = 7;
+    string location = 8;
+    string email = 9;
+    string profile_photo_url = 10;
+}
+
 message Empty {}
 
 service UserService {
     rpc GetAllUsers (Empty) returns (UsersList);
-    rpc GetUserById (UserID) returns (User);
-    rpc CreateUser (CreateUserRequest) returns (User);
-    rpc UpdateUser (UpdateUserRequest) returns (User);
+    rpc GetUserById (UserID) returns (GetUserResponse);
+    rpc CreateUser (CreateUserRequest) returns (CreateUserResponse);
+    rpc UpdateUser (UpdateUserRequest) returns (UpdateUserResponse);
     rpc DeleteUser (UserID) returns (Empty) {}
     rpc BlockUser (UserID) returns (Empty) {}
     rpc UnblockUser(UserID) returns (Empty) {}
