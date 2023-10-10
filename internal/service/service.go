@@ -182,14 +182,18 @@ func (us *UserService) CreateUser(ctx context.Context, req *pb.CreateUserRequest
     location := req.Location
     email := req.Email
     profilePhotoUrl := req.ProfilePhotoUrl
-    dateOfBirthStr := fmt.Sprintf("%04d-%02d-%02d", req.DateOfBirth.Year, req.DateOfBirth.Month, req.DateOfBirth.Day)
 
     // Validate the phone number using the regular expression pattern
     if !phoneNumberPattern.MatchString(phoneNumber) {
         return nil, status.Errorf(codes.InvalidArgument, "Invalid phone number format")
     }
 
-    var dateOfBirthTime time.Time
+    var dateOfBirthTime pq.NullTime
+
+    if req.DateOfBirth != nil {
+        dateOfBirthTime.Time = time.Date(int(req.DateOfBirth.Year), time.Month(req.DateOfBirth.Month), int(req.DateOfBirth.Day), 0, 0, 0, 0, time.UTC)
+        dateOfBirthTime.Valid = true
+    }
 
     // Insert the new user into the database without registration_date
     query := `
@@ -199,7 +203,7 @@ func (us *UserService) CreateUser(ctx context.Context, req *pb.CreateUserRequest
     `
     var user pb.User
 
-    err := us.db.QueryRowContext(ctx, query, firstName, lastName, phoneNumber, false, gender, dateOfBirthStr, location, email, profilePhotoUrl).Scan(
+    err := us.db.QueryRowContext(ctx, query, firstName, lastName, phoneNumber, false, gender, dateOfBirthTime, location, email, profilePhotoUrl).Scan(
         &user.Id,
         &user.FirstName,
         &user.LastName,
@@ -217,11 +221,16 @@ func (us *UserService) CreateUser(ctx context.Context, req *pb.CreateUserRequest
         return nil, status.Errorf(codes.Internal, "Internal server error")
     }
 
-    // Convert the time.Time value to your custom DateOfBirth type
-    user.DateOfBirth = &pb.DateOfBirth{
-        Year:  int32(dateOfBirthTime.Year()),
-        Month: int32(dateOfBirthTime.Month()),
-        Day:   int32(dateOfBirthTime.Day()),
+    // Convert the pq.NullTime value to a DateOfBirth protobuf
+    if dateOfBirthTime.Valid {
+        user.DateOfBirth = &pb.DateOfBirth{
+            Year:  int32(dateOfBirthTime.Time.Year()),
+            Month: int32(dateOfBirthTime.Time.Month()),
+            Day:   int32(dateOfBirthTime.Time.Day()),
+        }
+    } else {
+        // Set user.DateOfBirth to nil when the date of birth is NULL in the database
+        user.DateOfBirth = nil
     }
 
     return &user, nil
