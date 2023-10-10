@@ -190,7 +190,7 @@ func (us *UserService) CreateUser(ctx context.Context, req *pb.CreateUserRequest
         dateOfBirthTime.Valid = true
     }
 
-    var emailValue interface{} // Use an interface to handle NULL values
+    var emailValue interface{} // Handle NULL values
 
     if req.Email != "" {
         emailValue = req.Email
@@ -213,7 +213,7 @@ func (us *UserService) CreateUser(ctx context.Context, req *pb.CreateUserRequest
         &user.PhoneNumber,
         &user.Blocked,
         &user.Gender,
-        &dateOfBirthTime, // This value is not modified before Scan
+        &dateOfBirthTime, // Not modified before Scan
         &user.Location,
         &emailValue,
         &user.ProfilePhotoUrl,
@@ -225,7 +225,7 @@ func (us *UserService) CreateUser(ctx context.Context, req *pb.CreateUserRequest
         return nil, status.Errorf(codes.Internal, "Internal server error")
     }
 
-    // Convert the pq.NullTime value to a DateOfBirth protobuf [this code is for displaying date in response only]
+    // Convert the pq.NullTime value to a DateOfBirth protobuf [for response only]
     if dateOfBirthTime.Valid {
         user.DateOfBirth = &pb.DateOfBirth{
             Year:  int32(dateOfBirthTime.Time.Year()),
@@ -233,15 +233,14 @@ func (us *UserService) CreateUser(ctx context.Context, req *pb.CreateUserRequest
             Day:   int32(dateOfBirthTime.Time.Day()),
         }
     } else {
-        // Set user.DateOfBirth to nil when the date of birth is NULL in the database
-        user.DateOfBirth = nil
+        user.DateOfBirth = nil // Set user.DateOfBirth to nil when date of birth is NULL
     }
 
     // Log a successful user creation
     log.Printf("User created successfully. User ID: %v", user.Id)
 
     return &user, nil
-} 
+}
 
 // DeleteUser deletes a user from the database by their ID and returns an empty response.
 func (us *UserService) DeleteUser(ctx context.Context, userID *pb.UserID) (*pb.Empty, error) {
