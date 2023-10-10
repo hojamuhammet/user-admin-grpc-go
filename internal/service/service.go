@@ -173,26 +173,29 @@ func (us *UserService) GetUserById(ctx context.Context, req *pb.UserID) (*pb.Get
     return &user, nil
 }
 
-func (us *UserService) CreateUser(ctx context.Context, req *pb.CreateUserRequest) (*pb.CreateUserResponse, error) {
-    // Extract user creation data from req
-    firstName := req.FirstName
-    lastName := req.LastName
-    phoneNumber := req.PhoneNumber
-    gender := req.Gender
-    location := req.Location
-    email := req.Email
-    profilePhotoUrl := req.ProfilePhotoUrl
+func createDateOfBirth(year, month, day int32) time.Time {
+    return time.Date(int(year), time.Month(month), int(day), 0, 0, 0, 0, time.UTC)
+}
 
+func (us *UserService) CreateUser(ctx context.Context, req *pb.CreateUserRequest) (*pb.CreateUserResponse, error) {
     // Validate the phone number using the regular expression pattern
-    if !phoneNumberPattern.MatchString(phoneNumber) {
+    if !phoneNumberPattern.MatchString(req.PhoneNumber) {
         return nil, status.Errorf(codes.InvalidArgument, "Invalid phone number format")
     }
 
     var dateOfBirthTime pq.NullTime
 
     if req.DateOfBirth != nil {
-        dateOfBirthTime.Time = time.Date(int(req.DateOfBirth.Year), time.Month(req.DateOfBirth.Month), int(req.DateOfBirth.Day), 0, 0, 0, 0, time.UTC)
+        dateOfBirthTime.Time = createDateOfBirth(req.DateOfBirth.Year, req.DateOfBirth.Month, req.DateOfBirth.Day)
         dateOfBirthTime.Valid = true
+    }
+
+    var emailValue interface{} // Use an interface to handle NULL values
+
+    if req.Email != "" {
+        emailValue = req.Email
+    } else {
+        emailValue = nil // Set it to nil to insert NULL into the database
     }
 
     query := `
@@ -202,7 +205,7 @@ func (us *UserService) CreateUser(ctx context.Context, req *pb.CreateUserRequest
     `
     var user pb.CreateUserResponse
 
-    err := us.db.QueryRowContext(ctx, query, firstName, lastName, phoneNumber, false, gender, dateOfBirthTime, location, email, profilePhotoUrl).Scan(
+    err := us.db.QueryRowContext(ctx, query, req.FirstName, req.LastName, req.PhoneNumber, false, req.Gender, dateOfBirthTime, req.Location, emailValue, req.ProfilePhotoUrl).Scan(
         &user.Id,
         &user.FirstName,
         &user.LastName,
@@ -211,7 +214,7 @@ func (us *UserService) CreateUser(ctx context.Context, req *pb.CreateUserRequest
         &user.Gender,
         &dateOfBirthTime, // This value is not modified before Scan
         &user.Location,
-        &user.Email,
+        &emailValue,
         &user.ProfilePhotoUrl,
     )
 
@@ -220,7 +223,7 @@ func (us *UserService) CreateUser(ctx context.Context, req *pb.CreateUserRequest
         return nil, status.Errorf(codes.Internal, "Internal server error")
     }
 
-    // Convert the pq.NullTime value to a DateOfBirth protobuf
+    // Convert the pq.NullTime value to a DateOfBirth protobuf [this code is for displaying date in response only]
     if dateOfBirthTime.Valid {
         user.DateOfBirth = &pb.DateOfBirth{
             Year:  int32(dateOfBirthTime.Time.Year()),
@@ -240,9 +243,16 @@ func (us *UserService) UpdateUser(ctx context.Context, req *pb.UpdateUserRequest
     if !phoneNumberPattern.MatchString(req.PhoneNumber) {
         return nil, status.Errorf(codes.InvalidArgument, "Invalid phone number format")
     }
+        
+    // Variables to store updated user details
+    var updatedUser pb.UpdateUserResponse
+    
+    var dateOfBirthTime pq.NullTime
 
-    // Format the dateOfBirth as a string in the format "YYYY-MM-DD"
-    dateOfBirthStr := fmt.Sprintf("%04d-%02d-%02d", req.DateOfBirth.Year, req.DateOfBirth.Month, req.DateOfBirth.Day)
+    if req.DateOfBirth != nil {
+        dateOfBirthTime.Time = createDateOfBirth(req.DateOfBirth.Year, req.DateOfBirth.Month, req.DateOfBirth.Day)
+        dateOfBirthTime.Valid = true
+    }
 
     // Define the SQL query to update user details, including the profile_photo_url
     query := `
@@ -251,19 +261,16 @@ func (us *UserService) UpdateUser(ctx context.Context, req *pb.UpdateUserRequest
         WHERE id = $1
         RETURNING id, first_name, last_name, phone_number, blocked, gender, date_of_birth, location, email, profile_photo_url
     `
-    
-    // Variables to store updated user details
-    var updatedUser pb.UpdateUserResponse
-    
+
     // Execute the query to update the user's details
-    err := us.db.QueryRowContext(ctx, query, req.Id, req.FirstName, req.LastName, req.PhoneNumber, req.Gender, dateOfBirthStr, req.Location, req.Email, req.ProfilePhotoUrl).
+    err := us.db.QueryRowContext(ctx, query, req.Id, req.FirstName, req.LastName, req.PhoneNumber, req.Gender, dateOfBirthTime, req.Location, req.Email, req.ProfilePhotoUrl).
         Scan(
             &updatedUser.Id,
             &updatedUser.FirstName,
             &updatedUser.LastName,
             &updatedUser.PhoneNumber,
             &updatedUser.Gender,
-            &dateOfBirthStr, // Scan date_of_birth as a string
+            &dateOfBirthTime, // Scan date_of_birth as a string
             &updatedUser.Location,
             &updatedUser.Email,
             &updatedUser.ProfilePhotoUrl,
