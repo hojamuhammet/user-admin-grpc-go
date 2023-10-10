@@ -36,6 +36,10 @@ func (us *UserService) RegisterService(server *grpc.Server) {
 	pb.RegisterUserServiceServer(server, us)
 }
 
+func createDateOfBirth(year, month, day int32) time.Time {
+	return time.Date(int(year), time.Month(month), int(day), 0, 0, 0, 0, time.UTC)
+}
+
 // Regular expression pattern for a valid phone number
 var phoneNumberPattern = regexp.MustCompile(`^\+993\d{8}$`)
 
@@ -173,10 +177,6 @@ func (us *UserService) GetUserById(ctx context.Context, req *pb.UserID) (*pb.Get
     return &user, nil
 }
 
-func createDateOfBirth(year, month, day int32) time.Time {
-    return time.Date(int(year), time.Month(month), int(day), 0, 0, 0, 0, time.UTC)
-}
-
 func (us *UserService) CreateUser(ctx context.Context, req *pb.CreateUserRequest) (*pb.CreateUserResponse, error) {
     // Validate the phone number using the regular expression pattern
     if !phoneNumberPattern.MatchString(req.PhoneNumber) {
@@ -205,6 +205,7 @@ func (us *UserService) CreateUser(ctx context.Context, req *pb.CreateUserRequest
     `
     var user pb.CreateUserResponse
 
+    // Execute the SQL query and scan the result into user
     err := us.db.QueryRowContext(ctx, query, req.FirstName, req.LastName, req.PhoneNumber, false, req.Gender, dateOfBirthTime, req.Location, emailValue, req.ProfilePhotoUrl).Scan(
         &user.Id,
         &user.FirstName,
@@ -219,6 +220,7 @@ func (us *UserService) CreateUser(ctx context.Context, req *pb.CreateUserRequest
     )
 
     if err != nil {
+        // Log the error and return an internal server error to the client
         log.Printf("Error creating user: %v", err)
         return nil, status.Errorf(codes.Internal, "Internal server error")
     }
@@ -235,57 +237,11 @@ func (us *UserService) CreateUser(ctx context.Context, req *pb.CreateUserRequest
         user.DateOfBirth = nil
     }
 
+    // Log a successful user creation
+    log.Printf("User created successfully. User ID: %v", user.Id)
+
     return &user, nil
-}
-
-func (us *UserService) UpdateUser(ctx context.Context, req *pb.UpdateUserRequest) (*pb.UpdateUserResponse, error) {
-    // Validate the phone number using the regular expression pattern
-    if !phoneNumberPattern.MatchString(req.PhoneNumber) {
-        return nil, status.Errorf(codes.InvalidArgument, "Invalid phone number format")
-    }
-        
-    // Variables to store updated user details
-    var updatedUser pb.UpdateUserResponse
-    
-    var dateOfBirthTime pq.NullTime
-
-    if req.DateOfBirth != nil {
-        dateOfBirthTime.Time = createDateOfBirth(req.DateOfBirth.Year, req.DateOfBirth.Month, req.DateOfBirth.Day)
-        dateOfBirthTime.Valid = true
-    }
-
-    // Define the SQL query to update user details, including the profile_photo_url
-    query := `
-        UPDATE users
-        SET first_name = $2, last_name = $3, phone_number = $4, gender = $5, date_of_birth = $6, location = $7, email = $8, profile_photo_url = $9
-        WHERE id = $1
-        RETURNING id, first_name, last_name, phone_number, blocked, gender, date_of_birth, location, email, profile_photo_url
-    `
-
-    // Execute the query to update the user's details
-    err := us.db.QueryRowContext(ctx, query, req.Id, req.FirstName, req.LastName, req.PhoneNumber, req.Gender, dateOfBirthTime, req.Location, req.Email, req.ProfilePhotoUrl).
-        Scan(
-            &updatedUser.Id,
-            &updatedUser.FirstName,
-            &updatedUser.LastName,
-            &updatedUser.PhoneNumber,
-            &updatedUser.Gender,
-            &dateOfBirthTime, // Scan date_of_birth as a string
-            &updatedUser.Location,
-            &updatedUser.Email,
-            &updatedUser.ProfilePhotoUrl,
-        )
-    
-    if err != nil {
-        if err == sql.ErrNoRows {
-            return nil, status.Errorf(codes.NotFound, "User not found")
-        }
-        log.Printf("Error updating user: %v", err)
-        return nil, status.Errorf(codes.Internal, "Internal server error")
-    }
-    
-    return &updatedUser, nil
-}
+} 
 
 // DeleteUser deletes a user from the database by their ID and returns an empty response.
 func (us *UserService) DeleteUser(ctx context.Context, userID *pb.UserID) (*pb.Empty, error) {
