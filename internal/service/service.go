@@ -60,7 +60,7 @@ func (us *UserService) GetAllUsers(ctx context.Context, empty *pb.Empty) (*pb.Us
     // Iterate over the rows returned by the query
     for rows.Next() {
         var user pb.GetUserResponse
-        var dateOfBirthTime sql.NullTime
+        var dateOfBirth sql.NullTime
         var email sql.NullString
         var registrationTime time.Time
 
@@ -72,7 +72,7 @@ func (us *UserService) GetAllUsers(ctx context.Context, empty *pb.Empty) (*pb.Us
             &user.PhoneNumber,
             &user.Blocked,
             &user.Gender,
-            &dateOfBirthTime,
+            &dateOfBirth,
             &user.Location,
             &email,
             &user.ProfilePhotoUrl,
@@ -98,14 +98,19 @@ func (us *UserService) GetAllUsers(ctx context.Context, empty *pb.Empty) (*pb.Us
 
 
         // Handle the date of birth based on NullTime
-        if dateOfBirthTime.Valid {
+        if dateOfBirth.Valid {
             user.DateOfBirth = &pb.DateOfBirth{
-                Year:  int32(dateOfBirthTime.Time.Year()),
-                Month: int32(dateOfBirthTime.Time.Month()),
-                Day:   int32(dateOfBirthTime.Time.Day()),
+                Year:  int32(dateOfBirth.Time.Year()),
+                Month: int32(dateOfBirth.Time.Month()),
+                Day:   int32(dateOfBirth.Time.Day()),
             }
         } else {
             user.DateOfBirth = nil // Set user.DateOfBirth to nil when date of birth is NULL
+        }
+
+        // Check if email is valid and set it in the response
+        if email.Valid {
+            user.Email = email.String
         }
 
         // Append the user to the list of users
@@ -130,7 +135,8 @@ func (us *UserService) GetUserById(ctx context.Context, req *pb.UserID) (*pb.Get
     // Variables to store user details
     var user pb.GetUserResponse
     var registrationDate pq.NullTime
-    var dateOfBirthStr string
+    var dateOfBirth sql.NullTime
+    var email sql.NullString
 
     // Execute the query with the user's ID
     err := us.db.QueryRowContext(ctx, query, req.Id).Scan(
@@ -141,9 +147,9 @@ func (us *UserService) GetUserById(ctx context.Context, req *pb.UserID) (*pb.Get
         &user.Blocked,
         &registrationDate, // Scan registration_date as pq.NullTime
         &user.Gender,
-        &dateOfBirthStr,
+        &dateOfBirth,
         &user.Location,
-        &user.Email,
+        &email,
         &user.ProfilePhotoUrl,
     )
     if err != nil {
@@ -154,22 +160,34 @@ func (us *UserService) GetUserById(ctx context.Context, req *pb.UserID) (*pb.Get
         return nil, status.Errorf(codes.Internal, "Internal server error")
     }
 
-     // Extract the date portion of the dateOfBirthStr (YYYY-MM-DD)
-     dateOfBirthStr = dateOfBirthStr[:10] // This removes the "T00:00:00Z" part
+    // Convert the registration timestamp to the custom type
+    customTimestamp := &pb.CustomTimestamp{
+        Year:   int32(registrationDate.Time.Year()),
+        Month:  int32(registrationDate.Time.Month()),
+        Day:    int32(registrationDate.Time.Day()),
+        Hour:   int32(registrationDate.Time.Hour()),
+        Minute: int32(registrationDate.Time.Minute()),
+        Second: int32(registrationDate.Time.Second()),
+    }
 
-     // Parse the dateOfBirthStr into a time.Time
-     dateOfBirthTime, err := time.Parse("2006-01-02", dateOfBirthStr)
-     if err != nil {
-         log.Printf("Error parsing date: %v", err)
-         return nil, status.Errorf(codes.Internal, "Internal server error")
-     }
- 
-     // Convert the dateOfBirthTime into a pb.DateOfBirth message
-     user.DateOfBirth = &pb.DateOfBirth{
-         Year:  int32(dateOfBirthTime.Year()),
-         Month: int32(dateOfBirthTime.Month()),
-         Day:   int32(dateOfBirthTime.Day()),
-     }
+    // Set the custom registration date in the user response
+    user.RegistrationDate = customTimestamp
+
+     // Handle the date of birth based on NullTime
+    if dateOfBirth.Valid {
+        user.DateOfBirth = &pb.DateOfBirth{
+            Year:  int32(dateOfBirth.Time.Year()),
+            Month: int32(dateOfBirth.Time.Month()),
+            Day:   int32(dateOfBirth.Time.Day()),
+        }
+    } else {
+        user.DateOfBirth = nil // Set user.DateOfBirth to nil when date of birth is NULL
+    }
+
+    // Check if email is valid and set it in the response
+    if email.Valid {
+        user.Email = email.String
+    }
 
     return &user, nil
 }
