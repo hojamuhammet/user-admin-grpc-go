@@ -16,7 +16,6 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 type UserService struct {
@@ -48,7 +47,7 @@ var phoneNumberPattern = regexp.MustCompile(`^\+993\d{8}$`)
 // GetAllUsers retrieves a list of all users from the database.
 func (us *UserService) GetAllUsers(ctx context.Context, empty *pb.Empty) (*pb.UsersList, error) {
     // Execute a SQL query to select user data from the database
-    rows, err := us.db.QueryContext(ctx, "SELECT id, first_name, last_name, phone_number, blocked, registration_date, gender, date_of_birth, location, email, profile_photo_url FROM users")
+    rows, err := us.db.QueryContext(ctx, "SELECT id, first_name, last_name, phone_number, blocked, gender, date_of_birth, location, email, profile_photo_url, registration_date FROM users")
     if err != nil {
         // Log the error and return an internal server error status
         log.Printf("Error querying database: %v", err)
@@ -61,48 +60,52 @@ func (us *UserService) GetAllUsers(ctx context.Context, empty *pb.Empty) (*pb.Us
     // Iterate over the rows returned by the query
     for rows.Next() {
         var user pb.GetUserResponse
-        var registrationTime time.Time
-        var dateOfBirthStr string
+        var dateOfBirthTime sql.NullTime
         var email sql.NullString
+        var registrationTime time.Time
 
-        // Scan the row data into user and registrationDate
+        // Scan the row data into user, registrationTime, and other fields
         if err := rows.Scan(
-            &user.Id, 
-            &user.FirstName, 
-            &user.LastName, 
-            &user.PhoneNumber, 
-            &user.Blocked, 
-            &registrationTime,
+            &user.Id,
+            &user.FirstName,
+            &user.LastName,
+            &user.PhoneNumber,
+            &user.Blocked,
             &user.Gender,
-            &dateOfBirthStr,
+            &dateOfBirthTime,
             &user.Location,
             &email,
             &user.ProfilePhotoUrl,
+            &registrationTime,
         ); err != nil {
             // Log the error and return an internal server error status
             log.Printf("Error scanning rows: %v", err)
             return nil, status.Errorf(codes.Internal, "Internal server error")
         }
 
-        // Assign registrationTimestamp directly to user.RegistrationDate
-        user.RegistrationDate = timestamppb.New(registrationTime)
-
-        // Extract the date portion of the dateOfBirthStr (YYYY-MM-DD)
-        dateOfBirthStr = dateOfBirthStr[:10] // This removes the "T00:00:00Z" part
-
-        // Parse the dateOfBirthStr into a time.Time
-        dateOfBirthTime, err := time.Parse("2006-01-02", dateOfBirthStr)
-        if err != nil {
-            // Log the error and return an internal server error status
-            log.Printf("Error parsing date: %v", err)
-            return nil, status.Errorf(codes.Internal, "Internal server error")
+        // Convert the registration timestamp to the custom type
+        customTimestamp := &pb.CustomTimestamp{
+            Year:   int32(registrationTime.Year()),
+            Month:  int32(registrationTime.Month()),
+            Day:    int32(registrationTime.Day()),
+            Hour:   int32(registrationTime.Hour()),
+            Minute: int32(registrationTime.Minute()),
+            Second: int32(registrationTime.Second()),
         }
 
-        // Convert the dateOfBirthTime into a pb.DateOfBirth message
-        user.DateOfBirth = &pb.DateOfBirth{
-            Year:  int32(dateOfBirthTime.Year()),
-            Month: int32(dateOfBirthTime.Month()),
-            Day:   int32(dateOfBirthTime.Day()),
+        // Set the custom registration date in the user response
+        user.RegistrationDate = customTimestamp
+
+
+        // Handle the date of birth based on NullTime
+        if dateOfBirthTime.Valid {
+            user.DateOfBirth = &pb.DateOfBirth{
+                Year:  int32(dateOfBirthTime.Time.Year()),
+                Month: int32(dateOfBirthTime.Time.Month()),
+                Day:   int32(dateOfBirthTime.Time.Day()),
+            }
+        } else {
+            user.DateOfBirth = nil // Set user.DateOfBirth to nil when date of birth is NULL
         }
 
         // Append the user to the list of users
@@ -149,14 +152,6 @@ func (us *UserService) GetUserById(ctx context.Context, req *pb.UserID) (*pb.Get
         }
         log.Printf("Error fetching user by ID: %v", err)
         return nil, status.Errorf(codes.Internal, "Internal server error")
-    }
-
-    // Check if registrationDate is NULL in the database
-    if registrationDate.Valid {
-        // Assign the registrationDate directly to user.RegistrationDate
-        user.RegistrationDate = timestamppb.New(registrationDate.Time)
-    } else {
-        user.RegistrationDate = nil // Set RegistrationDate to nil in the protobuf message
     }
 
      // Extract the date portion of the dateOfBirthStr (YYYY-MM-DD)

@@ -4,7 +4,14 @@ package user;
 
 option go_package = "./gen";
 
-import "google/protobuf/timestamp.proto";
+message CustomTimestamp {
+    int32 year = 1;
+    int32 month = 2;
+    int32 day = 3;
+    int32 hour = 4;
+    int32 minute = 5;
+    int32 second = 6;
+}
 
 message DateOfBirth {
     int32 year = 1;
@@ -49,7 +56,7 @@ message GetUserResponse {
     string last_name = 3;
     string phone_number = 4;
     bool blocked = 5;
-    google.protobuf.Timestamp registration_date = 6;
+    CustomTimestamp registration_date = 6;
     string gender = 7;
     DateOfBirth date_of_birth = 8;
     string location = 9;
