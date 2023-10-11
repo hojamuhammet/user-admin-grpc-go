@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"log"
 	"regexp"
+	"strconv"
+	"strings"
 	"time"
 
 	pb "github.com/hojamuhammet/user-admin-grpc-go/gen"
@@ -240,6 +242,97 @@ func (us *UserService) CreateUser(ctx context.Context, req *pb.CreateUserRequest
     log.Printf("User created successfully. User ID: %v", user.Id)
 
     return &user, nil
+}
+
+func (us *UserService) UpdateUser(ctx context.Context, req *pb.UpdateUserRequest) (*pb.UpdateUserResponse, error) {
+    var updatedUser pb.UpdateUserResponse
+    var dateOfBirthTime pq.NullTime
+    var updatedEmail sql.NullString
+
+    // Build the UPDATE query
+    query := "UPDATE users SET "
+    var args []interface{}
+
+    // Check and add fields to the query and args based on the provided fields in the request
+    argCount := 1
+
+    if req.FirstName != "" {
+        query += "first_name = $" + strconv.Itoa(argCount) + ", "
+        args = append(args, req.FirstName)
+        argCount++
+    }
+
+    if req.LastName != "" {
+        query += "last_name = $" + strconv.Itoa(argCount) + ", "
+        args = append(args, req.LastName)
+        argCount++
+    }
+
+    if req.Gender != "" {
+        query += "gender = $" + strconv.Itoa(argCount) + ", "
+        args = append(args, req.Gender)
+        argCount++
+    }
+
+    if req.Location != "" {
+        query += "location = $" + strconv.Itoa(argCount) + ", "
+        args = append(args, req.Location)
+        argCount++
+    }
+
+    // Handle the email field using pq.NullString
+    if req.Email != "" {
+        query += "email = $" + strconv.Itoa(argCount) + ", "
+        args = append(args, req.Email)
+        argCount++
+    }
+
+    if req.ProfilePhotoUrl != "" {
+        query += "profile_photo_url = $" + strconv.Itoa(argCount) + ", "
+        args = append(args, req.ProfilePhotoUrl)
+        argCount++
+    }
+
+    // Remove the trailing comma and space from the query
+    query = strings.TrimSuffix(query, ", ")
+
+    // Add the WHERE clause to identify the user by ID
+    query += " WHERE id = $" + strconv.Itoa(argCount)
+    args = append(args, req.Id)
+
+    // Define the SQL query to return the updated user details
+    query += " RETURNING id, first_name, last_name, phone_number, blocked, gender, date_of_birth, location, email, profile_photo_url"
+
+    // Execute the query to update the user's details
+    err := us.db.QueryRowContext(ctx, query, args...).
+        Scan(
+            &updatedUser.Id,
+            &updatedUser.FirstName,
+            &updatedUser.LastName,
+            &updatedUser.PhoneNumber,
+            &updatedUser.Blocked,
+            &updatedUser.Gender,
+            &dateOfBirthTime,
+            &updatedUser.Location,
+            &updatedEmail,
+            &updatedUser.ProfilePhotoUrl,
+        )
+
+        if updatedEmail.Valid {
+            updatedUser.Email = updatedEmail.String
+        } else {
+            updatedUser.Email = "" // or handle it as you prefer
+        }
+
+    if err != nil {
+        if err == sql.ErrNoRows {
+            return nil, status.Errorf(codes.NotFound, "User not found")
+        }
+        log.Printf("Error updating user: %v", err)
+        return nil, status.Errorf(codes.Internal, "Internal server error")
+    }
+
+    return &updatedUser, nil
 }
 
 // DeleteUser deletes a user from the database by their ID and returns an empty response.
