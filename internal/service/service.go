@@ -63,6 +63,7 @@ func (us *UserService) GetAllUsers(ctx context.Context, empty *pb.Empty) (*pb.Us
         var user pb.GetUserResponse
         var registrationTime time.Time
         var dateOfBirthStr string
+        var email sql.NullString
 
         // Scan the row data into user and registrationDate
         if err := rows.Scan(
@@ -75,7 +76,7 @@ func (us *UserService) GetAllUsers(ctx context.Context, empty *pb.Empty) (*pb.Us
             &user.Gender,
             &dateOfBirthStr,
             &user.Location,
-            &user.Email,
+            &email,
             &user.ProfilePhotoUrl,
         ); err != nil {
             // Log the error and return an internal server error status
@@ -118,7 +119,6 @@ func (us *UserService) GetAllUsers(ctx context.Context, empty *pb.Empty) (*pb.Us
     // Return the list of users as a UsersList response
     return &pb.UsersList{Users: users}, nil
 }
-
 
 func (us *UserService) GetUserById(ctx context.Context, req *pb.UserID) (*pb.GetUserResponse, error) {
     // Query to retrieve user by ID
