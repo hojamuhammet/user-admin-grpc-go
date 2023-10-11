@@ -268,6 +268,16 @@ func (us *UserService) UpdateUser(ctx context.Context, req *pb.UpdateUserRequest
         argCount++
     }
 
+    // Validate the phone number using the regular expression pattern
+    if req.PhoneNumber != "" {
+        if !phoneNumberPattern.MatchString(req.PhoneNumber) {
+            return nil, status.Errorf(codes.InvalidArgument, "Invalid phone number format")
+        }
+        query += "phone_number = $" + strconv.Itoa(argCount) + ", "
+        args = append(args, req.PhoneNumber)
+        argCount++
+    }
+
     if req.Gender != "" {
         query += "gender = $" + strconv.Itoa(argCount) + ", "
         args = append(args, req.Gender)
