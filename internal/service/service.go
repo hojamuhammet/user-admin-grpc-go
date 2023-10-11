@@ -274,6 +274,13 @@ func (us *UserService) UpdateUser(ctx context.Context, req *pb.UpdateUserRequest
         argCount++
     }
 
+    if req.DateOfBirth != nil {
+        query += "date_of_birth = $" + strconv.Itoa(argCount) + ", "
+        dateOfBirth := time.Date(int(req.DateOfBirth.Year), time.Month(req.DateOfBirth.Month), int(req.DateOfBirth.Day), 0, 0, 0, 0, time.UTC)
+        args = append(args, dateOfBirth)
+        argCount++
+    }
+
     if req.Location != "" {
         query += "location = $" + strconv.Itoa(argCount) + ", "
         args = append(args, req.Location)
@@ -317,6 +324,16 @@ func (us *UserService) UpdateUser(ctx context.Context, req *pb.UpdateUserRequest
             &updatedEmail,
             &updatedUser.ProfilePhotoUrl,
         )
+
+        if dateOfBirthTime.Valid {
+            updatedUser.DateOfBirth = &pb.DateOfBirth{
+                Year:  int32(dateOfBirthTime.Time.Year()),
+                Month: int32(dateOfBirthTime.Time.Month()),
+                Day:   int32(dateOfBirthTime.Time.Day()),
+            }
+        } else {
+            updatedUser.DateOfBirth = nil
+        }
 
         if updatedEmail.Valid {
             updatedUser.Email = updatedEmail.String
