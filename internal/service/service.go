@@ -205,12 +205,13 @@ func (us *UserService) CreateUser(ctx context.Context, req *pb.CreateUserRequest
         dateOfBirthTime.Valid = true
     }
 
-    var emailValue interface{} // Handle NULL values
+    var emailValue sql.NullString // Handle NULL values
 
     if req.Email != "" {
-        emailValue = req.Email
+        emailValue.String = req.Email
+        emailValue.Valid = true
     } else {
-        emailValue = nil // Set it to nil to insert NULL into the database
+        emailValue.Valid = false // Set it to false to insert NULL into the database
     }
 
     query := `
@@ -239,6 +240,13 @@ func (us *UserService) CreateUser(ctx context.Context, req *pb.CreateUserRequest
         log.Printf("Error creating user: %v", err)
         return nil, status.Errorf(codes.Internal, "Internal server error")
     }
+    
+    // Handle the email value based on the emailValue's Valid field
+    if emailValue.Valid {
+        user.Email = emailValue.String
+    } else {
+        user.Email = "" // or you can set it to null if you prefer
+    }
 
     // Convert the pq.NullTime value to a DateOfBirth protobuf [for response only]
     if dateOfBirthTime.Valid {
@@ -250,9 +258,6 @@ func (us *UserService) CreateUser(ctx context.Context, req *pb.CreateUserRequest
     } else {
         user.DateOfBirth = nil // Set user.DateOfBirth to nil when date of birth is NULL
     }
-
-    // Log a successful user creation
-    log.Printf("User created successfully. User ID: %v", user.Id)
 
     return &user, nil
 }
