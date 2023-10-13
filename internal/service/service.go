@@ -259,13 +259,21 @@ func (us *UserService) CreateUser(ctx context.Context, req *pb.CreateUserRequest
         user.DateOfBirth = nil // Set user.DateOfBirth to nil when date of birth is NULL
     }
 
+    log.Printf("User created successfully. User ID: %d", user.Id)
+
     return &user, nil
 }
 
 func (us *UserService) UpdateUser(ctx context.Context, req *pb.UpdateUserRequest) (*pb.UpdateUserResponse, error) {
     var updatedUser pb.UpdateUserResponse
-    var dateOfBirthTime pq.NullTime
+
+    var updatedFirstName sql.NullString
+    var updatedLastName sql.NullString
+    var updatedGender sql.NullString
+    var updatedDateOfBirth pq.NullTime
+    var updatedLocation sql.NullString
     var updatedEmail sql.NullString
+    var updatedProfilePhotoUrl sql.NullString
 
     // Build the UPDATE query
     query := "UPDATE users SET "
@@ -274,13 +282,17 @@ func (us *UserService) UpdateUser(ctx context.Context, req *pb.UpdateUserRequest
     // Check and add fields to the query and args based on the provided fields in the request
     argCount := 1
 
-    if req.FirstName != "" {
+    if req.FirstName == "null" {
+        query += "first_name = NULL, "
+    } else if req.FirstName != "" {
         query += "first_name = $" + strconv.Itoa(argCount) + ", "
         args = append(args, req.FirstName)
         argCount++
     }
 
-    if req.LastName != "" {
+    if req.LastName == "null" {
+        query += "last_name = NULL, "
+    } else if req.LastName != "" {
         query += "last_name = $" + strconv.Itoa(argCount) + ", "
         args = append(args, req.LastName)
         argCount++
@@ -296,33 +308,43 @@ func (us *UserService) UpdateUser(ctx context.Context, req *pb.UpdateUserRequest
         argCount++
     }
 
-    if req.Gender != "" {
+    if req.Gender == "null" {
+        query += "gender = NULL, "
+    } else if req.Gender != "" {
         query += "gender = $" + strconv.Itoa(argCount) + ", "
         args = append(args, req.Gender)
         argCount++
     }
 
-    if req.DateOfBirth != nil {
-        query += "date_of_birth = $" + strconv.Itoa(argCount) + ", "
+    if req.DateOfBirth != nil && req.DateOfBirth.Year == 0 && req.DateOfBirth.Month == 0 && req.DateOfBirth.Day == 0 {
+        query += "date_of_birth = NULL, "
+    } else if req.DateOfBirth != nil {
         dateOfBirth := time.Date(int(req.DateOfBirth.Year), time.Month(req.DateOfBirth.Month), int(req.DateOfBirth.Day), 0, 0, 0, 0, time.UTC)
+        query += "date_of_birth = $" + strconv.Itoa(argCount) + ", "
         args = append(args, dateOfBirth)
         argCount++
     }
 
-    if req.Location != "" {
+    if req.Location == "null" {
+        query += "location = NULL, "
+    } else if req.Location != "" {
         query += "location = $" + strconv.Itoa(argCount) + ", "
         args = append(args, req.Location)
         argCount++
     }
 
-    // Handle the email field using pq.NullString
-    if req.Email != "" {
+     // Handle the email field using pq.NullString
+    if req.Email == "null" {
+        query += "email = NULL, " // Set the email to NULL in the database
+    } else if req.Email != "" {
         query += "email = $" + strconv.Itoa(argCount) + ", "
         args = append(args, req.Email)
         argCount++
     }
 
-    if req.ProfilePhotoUrl != "" {
+    if req.ProfilePhotoUrl == "null" {
+        query += "profile_photo_url = NULL, "
+    } else if req.ProfilePhotoUrl != "" {
         query += "profile_photo_url = $" + strconv.Itoa(argCount) + ", "
         args = append(args, req.ProfilePhotoUrl)
         argCount++
@@ -342,31 +364,61 @@ func (us *UserService) UpdateUser(ctx context.Context, req *pb.UpdateUserRequest
     err := us.db.QueryRowContext(ctx, query, args...).
         Scan(
             &updatedUser.Id,
-            &updatedUser.FirstName,
-            &updatedUser.LastName,
+            &updatedFirstName,
+            &updatedLastName,
             &updatedUser.PhoneNumber,
             &updatedUser.Blocked,
-            &updatedUser.Gender,
-            &dateOfBirthTime,
-            &updatedUser.Location,
+            &updatedGender,
+            &updatedDateOfBirth,
+            &updatedLocation,
             &updatedEmail,
-            &updatedUser.ProfilePhotoUrl,
+            &updatedProfilePhotoUrl,
         )
 
-        if dateOfBirthTime.Valid {
+        if updatedFirstName.Valid {
+            updatedUser.FirstName = updatedFirstName.String
+        } else {
+            updatedUser.FirstName = ""
+        }
+
+        if updatedLastName.Valid {
+            updatedUser.LastName = updatedLastName.String
+        } else {
+            updatedUser.LastName = ""
+        }
+
+        if updatedGender.Valid {
+            updatedUser.Gender = updatedGender.String
+        } else {
+            updatedUser.Gender = ""
+        }
+
+        if updatedDateOfBirth.Valid {
             updatedUser.DateOfBirth = &pb.DateOfBirth{
-                Year:  int32(dateOfBirthTime.Time.Year()),
-                Month: int32(dateOfBirthTime.Time.Month()),
-                Day:   int32(dateOfBirthTime.Time.Day()),
+                Year:  int32(updatedDateOfBirth.Time.Year()),
+                Month: int32(updatedDateOfBirth.Time.Month()),
+                Day:   int32(updatedDateOfBirth.Time.Day()),
             }
         } else {
             updatedUser.DateOfBirth = nil
         }
 
+        if updatedLocation.Valid {
+            updatedUser.Location = updatedLocation.String
+        } else {
+            updatedUser.Location = ""
+        }
+
         if updatedEmail.Valid {
             updatedUser.Email = updatedEmail.String
         } else {
-            updatedUser.Email = "" // or handle it as you prefer
+            updatedUser.Email = ""
+        }
+
+        if updatedProfilePhotoUrl.Valid {
+            updatedUser.ProfilePhotoUrl = updatedProfilePhotoUrl.String
+        } else {
+            updatedUser.ProfilePhotoUrl = ""
         }
 
     if err != nil {
