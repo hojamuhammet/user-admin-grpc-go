@@ -19,35 +19,20 @@ message DateOfBirth {
     int32 day = 3;
 }
 
-message UsersList {
-    repeated GetUserResponse users = 1;
-}
+message Empty {}
 
 message UserID {
     int32 id = 1;
 }
 
-message CreateUserRequest {
-    string first_name = 1;
-    string last_name = 2;
-    string phone_number = 3;
-    string gender = 4;
-    DateOfBirth date_of_birth = 5;
-    string location = 6;
-    string email = 7;
-    string profile_photo_url = 8;
+message UsersList {
+    repeated GetUserResponse users = 1;
 }
 
-message UpdateUserRequest {
-    int32 id = 1;
-    string first_name = 2;
-    string last_name = 3;
-    string phone_number = 4;
-    string gender = 5;
-    DateOfBirth date_of_birth = 6;
-    string location = 7;
-    string email =8 ;
-    string profile_photo_url = 9;
+message PaginationRequest {
+    int32 page_size = 1;
+    string page_token = 2;
+
 }
 
 message GetUserResponse {
@@ -64,6 +49,17 @@ message GetUserResponse {
     string profile_photo_url = 11;
 }
 
+message CreateUserRequest {
+    string first_name = 1;
+    string last_name = 2;
+    string phone_number = 3;
+    string gender = 4;
+    DateOfBirth date_of_birth = 5;
+    string location = 6;
+    string email = 7;
+    string profile_photo_url = 8;
+}
+
 message CreateUserResponse {
     int32 id = 1;
     string first_name = 2;
@@ -75,6 +71,18 @@ message CreateUserResponse {
     string location = 8;
     string email = 9;
     string profile_photo_url = 10;
+}
+
+message UpdateUserRequest {
+    int32 id = 1;
+    string first_name = 2;
+    string last_name = 3;
+    string phone_number = 4;
+    string gender = 5;
+    DateOfBirth date_of_birth = 6;
+    string location = 7;
+    string email =8 ;
+    string profile_photo_url = 9;
 }
 
 message UpdateUserResponse {
@@ -89,8 +97,6 @@ message UpdateUserResponse {
     string email = 9;
     string profile_photo_url = 10;
 }
-
-message Empty {}
 
 service UserService {
     rpc GetAllUsers (Empty) returns (UsersList);
