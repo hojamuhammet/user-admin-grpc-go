@@ -47,6 +47,9 @@ var phoneNumberPattern = regexp.MustCompile(`^\+993\d{8}$`)
 // GetAllUsers retrieves a list of all users from the database.
 func (us *UserService) GetAllUsers(ctx context.Context, req *pb.PaginationRequest) (*pb.UsersList, error) {
     pageSize := req.PageSize
+    if pageSize <= 0 {
+        pageSize = 10 // Default page size
+    }
     pageToken := req.PageToken
 
     var query string
