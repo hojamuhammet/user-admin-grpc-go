@@ -45,9 +45,24 @@ func createDateOfBirth(year, month, day int32) time.Time {
 var phoneNumberPattern = regexp.MustCompile(`^\+993\d{8}$`)
 
 // GetAllUsers retrieves a list of all users from the database.
-func (us *UserService) GetAllUsers(ctx context.Context, empty *pb.Empty) (*pb.UsersList, error) {
+func (us *UserService) GetAllUsers(ctx context.Context, req *pb.PaginationRequest) (*pb.UsersList, error) {
+    pageSize := req.PageSize
+    pageToken := req.PageToken
+
+    var query string
+    var args []interface{}
+
+    // If a valid pageToken is provided, add it to the SQL query for pagination
+    if pageToken != "" {
+        query = "SELECT id, first_name, last_name, phone_number, blocked, gender, date_of_birth, location, email, profile_photo_url, registration_date FROM users WHERE id > $1 ORDER BY id LIMIT $2"
+        args = append(args, pageToken, pageSize)
+    } else {
+        query = "SELECT id, first_name, last_name, phone_number, blocked, gender, date_of_birth, location, email, profile_photo_url, registration_date FROM users ORDER BY id LIMIT $1"
+        args = append(args, pageSize)
+    }
+
     // Execute a SQL query to select user data from the database
-    rows, err := us.db.QueryContext(ctx, "SELECT id, first_name, last_name, phone_number, blocked, gender, date_of_birth, location, email, profile_photo_url, registration_date FROM users")
+    rows, err := us.db.QueryContext(ctx, query, args...)
     if err != nil {
         // Log the error and return an internal server error status
         log.Printf("Error querying database: %v", err)
@@ -56,6 +71,7 @@ func (us *UserService) GetAllUsers(ctx context.Context, empty *pb.Empty) (*pb.Us
     defer rows.Close()
 
     var users []*pb.GetUserResponse
+    var lastUserId string
 
     // Iterate over the rows returned by the query
     for rows.Next() {
@@ -96,7 +112,6 @@ func (us *UserService) GetAllUsers(ctx context.Context, empty *pb.Empty) (*pb.Us
         // Set the custom registration date in the user response
         user.RegistrationDate = customTimestamp
 
-
         // Handle the date of birth based on NullTime
         if dateOfBirth.Valid {
             user.DateOfBirth = &pb.DateOfBirth{
@@ -115,6 +130,9 @@ func (us *UserService) GetAllUsers(ctx context.Context, empty *pb.Empty) (*pb.Us
 
         // Append the user to the list of users
         users = append(users, &user)
+
+        // Set the lastUserId to the current user's ID
+        lastUserId = strconv.Itoa(int(user.Id))
     }
 
     // Check for any errors that occurred during iteration
@@ -124,8 +142,10 @@ func (us *UserService) GetAllUsers(ctx context.Context, empty *pb.Empty) (*pb.Us
         return nil, status.Errorf(codes.Internal, "Internal server error")
     }
 
+    nextPageToken := lastUserId
+
     // Return the list of users as a UsersList response
-    return &pb.UsersList{Users: users}, nil
+    return &pb.UsersList{Users: users, NextPageToken: nextPageToken}, nil
 }
 
 func (us *UserService) GetUserById(ctx context.Context, req *pb.UserID) (*pb.GetUserResponse, error) {
