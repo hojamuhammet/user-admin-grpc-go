@@ -27,11 +27,13 @@ message UserID {
 
 message UsersList {
     repeated GetUserResponse users = 1;
+    string next_page_token = 2;
 }
 
 message PaginationRequest {
     int32 page_size = 1;
     string page_token = 2;
+    string next_page_token = 3;
 
 }
 
@@ -99,7 +101,7 @@ message UpdateUserResponse {
 }
 
 service UserService {
-    rpc GetAllUsers (Empty) returns (UsersList);
+    rpc GetAllUsers (PaginationRequest) returns (UsersList);
     rpc GetUserById (UserID) returns (GetUserResponse);
     rpc CreateUser (CreateUserRequest) returns (CreateUserResponse);
     rpc UpdateUser (UpdateUserRequest) returns (UpdateUserResponse);
