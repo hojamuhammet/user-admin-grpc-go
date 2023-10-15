@@ -12,6 +12,7 @@ import (
 
 	pb "github.com/hojamuhammet/user-admin-grpc-go/gen"
 	"github.com/hojamuhammet/user-admin-grpc-go/internal/config"
+	"github.com/hojamuhammet/user-admin-grpc-go/internal/utils"
 	"github.com/lib/pq"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -221,21 +222,18 @@ func (us *UserService) CreateUser(ctx context.Context, req *pb.CreateUserRequest
         return nil, status.Errorf(codes.InvalidArgument, "Invalid phone number format")
     }
 
-    var dateOfBirthTime pq.NullTime
+    var firstName = utils.CreateNullString(req.FirstName)
+    var lastName = utils.CreateNullString(req.LastName)
 
+    var dateOfBirth pq.NullTime
     if req.DateOfBirth != nil {
-        dateOfBirthTime.Time = createDateOfBirth(req.DateOfBirth.Year, req.DateOfBirth.Month, req.DateOfBirth.Day)
-        dateOfBirthTime.Valid = true
+        dateOfBirth.Time = createDateOfBirth(req.DateOfBirth.Year, req.DateOfBirth.Month, req.DateOfBirth.Day)
+        dateOfBirth.Valid = true
     }
 
-    var emailValue sql.NullString // Handle NULL values
-
-    if req.Email != "" {
-        emailValue.String = req.Email
-        emailValue.Valid = true
-    } else {
-        emailValue.Valid = false // Set it to false to insert NULL into the database
-    }
+    var location = utils.CreateNullString(req.Location)
+    var email = utils.CreateNullString(req.Email)
+    var profilePhotoUrl = utils.CreateNullString(req.ProfilePhotoUrl)
 
     query := `
         INSERT INTO users (first_name, last_name, phone_number, blocked, gender, date_of_birth, location, email, profile_photo_url)
@@ -245,17 +243,17 @@ func (us *UserService) CreateUser(ctx context.Context, req *pb.CreateUserRequest
     var user pb.CreateUserResponse
 
     // Execute the SQL query and scan the result into user
-    err := us.db.QueryRowContext(ctx, query, req.FirstName, req.LastName, req.PhoneNumber, false, req.Gender, dateOfBirthTime, req.Location, emailValue, req.ProfilePhotoUrl).Scan(
+    err := us.db.QueryRowContext(ctx, query, firstName, lastName, req.PhoneNumber, false, req.Gender, dateOfBirth, location, email, profilePhotoUrl).Scan(
         &user.Id,
-        &user.FirstName,
-        &user.LastName,
+        &firstName,
+        &lastName,
         &user.PhoneNumber,
         &user.Blocked,
         &user.Gender,
-        &dateOfBirthTime, // Not modified before Scan
-        &user.Location,
-        &emailValue,
-        &user.ProfilePhotoUrl,
+        &dateOfBirth, // Not modified before Scan
+        &location,
+        &email,
+        &profilePhotoUrl,
     )
 
     if err != nil {
@@ -263,26 +261,24 @@ func (us *UserService) CreateUser(ctx context.Context, req *pb.CreateUserRequest
         log.Printf("Error creating user: %v", err)
         return nil, status.Errorf(codes.Internal, "Internal server error")
     }
-    
-    // Handle the email value based on the emailValue's Valid field
-    if emailValue.Valid {
-        user.Email = emailValue.String
-    } else {
-        user.Email = "" // or you can set it to null if you prefer
-    }
+
+    user.FirstName = utils.NullableStringToString(firstName.Valid, firstName.String)
+    user.LastName = utils.NullableStringToString(lastName.Valid, lastName.String)
 
     // Convert the pq.NullTime value to a DateOfBirth protobuf [for response only]
-    if dateOfBirthTime.Valid {
+    if dateOfBirth.Valid {
         user.DateOfBirth = &pb.DateOfBirth{
-            Year:  int32(dateOfBirthTime.Time.Year()),
-            Month: int32(dateOfBirthTime.Time.Month()),
-            Day:   int32(dateOfBirthTime.Time.Day()),
+            Year:  int32(dateOfBirth.Time.Year()),
+            Month: int32(dateOfBirth.Time.Month()),
+            Day:   int32(dateOfBirth.Time.Day()),
         }
     } else {
         user.DateOfBirth = nil // Set user.DateOfBirth to nil when date of birth is NULL
     }
 
-    log.Printf("User created successfully. User ID: %d", user.Id)
+    user.Location = utils.NullableStringToString(location.Valid, location.String)
+    user.Email = utils.NullableStringToString(email.Valid, email.String)
+    user.ProfilePhotoUrl = utils.NullableStringToString(profilePhotoUrl.Valid, profilePhotoUrl.String)
 
     return &user, nil
 }
@@ -398,23 +394,9 @@ func (us *UserService) UpdateUser(ctx context.Context, req *pb.UpdateUserRequest
             &updatedProfilePhotoUrl,
         )
 
-        if updatedFirstName.Valid {
-            updatedUser.FirstName = updatedFirstName.String
-        } else {
-            updatedUser.FirstName = ""
-        }
-
-        if updatedLastName.Valid {
-            updatedUser.LastName = updatedLastName.String
-        } else {
-            updatedUser.LastName = ""
-        }
-
-        if updatedGender.Valid {
-            updatedUser.Gender = updatedGender.String
-        } else {
-            updatedUser.Gender = ""
-        }
+        updatedUser.FirstName = utils.NullableStringToString(updatedFirstName.Valid, updatedFirstName.String)
+        updatedUser.LastName = utils.NullableStringToString(updatedLastName.Valid, updatedLastName.String)
+        updatedUser.Gender = utils.NullableStringToString(updatedGender.Valid, updatedGender.String)
 
         if updatedDateOfBirth.Valid {
             updatedUser.DateOfBirth = &pb.DateOfBirth{
@@ -426,23 +408,9 @@ func (us *UserService) UpdateUser(ctx context.Context, req *pb.UpdateUserRequest
             updatedUser.DateOfBirth = nil
         }
 
-        if updatedLocation.Valid {
-            updatedUser.Location = updatedLocation.String
-        } else {
-            updatedUser.Location = ""
-        }
-
-        if updatedEmail.Valid {
-            updatedUser.Email = updatedEmail.String
-        } else {
-            updatedUser.Email = ""
-        }
-
-        if updatedProfilePhotoUrl.Valid {
-            updatedUser.ProfilePhotoUrl = updatedProfilePhotoUrl.String
-        } else {
-            updatedUser.ProfilePhotoUrl = ""
-        }
+        updatedUser.Location = utils.NullableStringToString(updatedLocation.Valid, updatedLocation.String)
+        updatedUser.Email = utils.NullableStringToString(updatedEmail.Valid, updatedEmail.String)
+        updatedUser.ProfilePhotoUrl = utils.NullableStringToString(updatedProfilePhotoUrl.Valid, updatedProfilePhotoUrl.String)
 
     if err != nil {
         if err == sql.ErrNoRows {
@@ -481,7 +449,7 @@ func (us *UserService) DeleteUser(ctx context.Context, userID *pb.UserID) (*pb.E
 	return &pb.Empty{}, nil
 }
 
-func (us *UserService) toggleBlockStatus(ctx context.Context, userID *pb.UserID, blocked bool) error {
+func (us *UserService) ToggleBlockStatus(ctx context.Context, userID *pb.UserID, blocked bool) error {
 	// Execute an UPDATE query with a WHERE clause to set the "blocked" field to the specified status for the given user ID.
 	result, err := us.db.Exec("UPDATE users SET blocked=$1 WHERE id=$2", blocked, userID.Id)
 	if err != nil {
@@ -505,7 +473,7 @@ func (us *UserService) toggleBlockStatus(ctx context.Context, userID *pb.UserID,
 
 // BlockUser updates the "blocked" status of a user in the database and returns an empty response.
 func (us *UserService) BlockUser(ctx context.Context, userID *pb.UserID) (*pb.Empty, error) {
-	if err := us.toggleBlockStatus(ctx, userID, true); err != nil {
+	if err := us.ToggleBlockStatus(ctx, userID, true); err != nil {
 		if status.Code(err) == codes.NotFound {
 			log.Printf("User not found: %v", err)
 			return nil, status.Error(codes.NotFound, "User not found")
@@ -520,7 +488,7 @@ func (us *UserService) BlockUser(ctx context.Context, userID *pb.UserID) (*pb.Em
 
 // UnblockUser updates the "blocked" status of a user in the database and returns an empty response.
 func (us *UserService) UnblockUser(ctx context.Context, userID *pb.UserID) (*pb.Empty, error) {
-	if err := us.toggleBlockStatus(ctx, userID, false); err != nil {
+	if err := us.ToggleBlockStatus(ctx, userID, false); err != nil {
 		if status.Code(err) == codes.NotFound {
 			log.Printf("User not found: %v", err)
 			return nil, status.Error(codes.NotFound, "User not found")
