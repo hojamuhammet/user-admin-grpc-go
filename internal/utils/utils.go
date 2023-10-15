@@ -1,6 +1,9 @@
 package utils
 
-import "database/sql"
+import (
+	"database/sql"
+	"time"
+)
 
 func CreateNullString(value string) sql.NullString {
 	if value != "" {
@@ -14,4 +17,9 @@ func NullableStringToString(valid bool, value string) string {
         return value
     }
     return ""
+}
+
+
+func ToDate(year, month, day int32) time.Time {
+	return time.Date(int(year), time.Month(month), int(day), 0, 0, 0, 0, time.UTC)
 }

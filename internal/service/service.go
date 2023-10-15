@@ -38,10 +38,6 @@ func (us *UserService) RegisterService(server *grpc.Server) {
 	pb.RegisterUserServiceServer(server, us)
 }
 
-func createDateOfBirth(year, month, day int32) time.Time {
-	return time.Date(int(year), time.Month(month), int(day), 0, 0, 0, 0, time.UTC)
-}
-
 // Regular expression pattern for a valid phone number
 var phoneNumberPattern = regexp.MustCompile(`^\+993\d{8}$`)
 
@@ -227,7 +223,7 @@ func (us *UserService) CreateUser(ctx context.Context, req *pb.CreateUserRequest
 
     var dateOfBirth pq.NullTime
     if req.DateOfBirth != nil {
-        dateOfBirth.Time = createDateOfBirth(req.DateOfBirth.Year, req.DateOfBirth.Month, req.DateOfBirth.Day)
+        dateOfBirth.Time = utils.ToDate(req.DateOfBirth.Year, req.DateOfBirth.Month, req.DateOfBirth.Day)
         dateOfBirth.Valid = true
     }
 
