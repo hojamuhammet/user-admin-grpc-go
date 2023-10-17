@@ -117,19 +117,11 @@ func (us *UserService) GetAllUsers(ctx context.Context, req *pb.PaginationReques
         // Set the custom registration date in the user response
         user.RegistrationDate = customTimestamp
 
-        if firstName.Valid {
-            user.FirstName = firstName.String
-        }
+        user.FirstName = utils.NullableStringToString(firstName.Valid, firstName.String)
+        user.LastName = utils.NullableStringToString(lastName.Valid, lastName.String)
+        user.Gender = utils.NullableStringToString(gender.Valid, gender.String)
 
-        if lastName.Valid {
-            user.LastName = lastName.String
-        }
-
-        if gender.Valid {
-            user.Gender = gender.String
-        }
-
-        // Handle the date of birth based on NullTime
+        // Convert the pq.NullTime value to a DateOfBirth protobuf [for response only]
         if dateOfBirth.Valid {
             user.DateOfBirth = &pb.DateOfBirth{
                 Year:  int32(dateOfBirth.Time.Year()),
@@ -140,18 +132,9 @@ func (us *UserService) GetAllUsers(ctx context.Context, req *pb.PaginationReques
             user.DateOfBirth = nil // Set user.DateOfBirth to nil when date of birth is NULL
         }
 
-        if location.Valid {
-            user.Location = location.String
-        }
-
-        // Check if email is valid and set it in the response
-        if email.Valid {
-            user.Email = email.String
-        }
-
-        if profilePhotoUrl.Valid { 
-            user.ProfilePhotoUrl = profilePhotoUrl.String
-        }
+        user.Location = utils.NullableStringToString(location.Valid, location.String)
+        user.Email = utils.NullableStringToString(email.Valid, email.String)
+        user.ProfilePhotoUrl = utils.NullableStringToString(profilePhotoUrl.Valid, profilePhotoUrl.String)
 
         // Append the user to the list of users
         users = append(users, &user)
@@ -224,19 +207,11 @@ func (us *UserService) GetUserById(ctx context.Context, req *pb.UserID) (*pb.Get
     // Set the custom registration date in the user response
     user.RegistrationDate = customTimestamp
 
-    if firstName.Valid {
-        user.FirstName = firstName.String
-    }
+    user.FirstName = utils.NullableStringToString(firstName.Valid, firstName.String)
+    user.LastName = utils.NullableStringToString(lastName.Valid, lastName.String)
+    user.Gender = utils.NullableStringToString(gender.Valid, gender.String)
 
-    if lastName.Valid {
-        user.LastName = lastName.String
-    }
-
-    if gender.Valid {
-        user.Gender = gender.String
-    }
-
-    // Handle the date of birth based on NullTime
+    // Convert the pq.NullTime value to a DateOfBirth protobuf [for response only]
     if dateOfBirth.Valid {
         user.DateOfBirth = &pb.DateOfBirth{
             Year:  int32(dateOfBirth.Time.Year()),
@@ -247,19 +222,10 @@ func (us *UserService) GetUserById(ctx context.Context, req *pb.UserID) (*pb.Get
         user.DateOfBirth = nil // Set user.DateOfBirth to nil when date of birth is NULL
     }
 
-    if location.Valid {
-        user.Location = location.String
-    }
+    user.Location = utils.NullableStringToString(location.Valid, location.String)
+    user.Email = utils.NullableStringToString(email.Valid, email.String)
+    user.ProfilePhotoUrl = utils.NullableStringToString(profilePhotoUrl.Valid, profilePhotoUrl.String)
 
-    // Check if email is valid and set it in the response
-    if email.Valid {
-        user.Email = email.String
-    }
-
-    if profilePhotoUrl.Valid { 
-        user.ProfilePhotoUrl = profilePhotoUrl.String
-    }
-    
     return &user, nil
 }
 
@@ -271,6 +237,7 @@ func (us *UserService) CreateUser(ctx context.Context, req *pb.CreateUserRequest
 
     var firstName = utils.CreateNullString(req.FirstName)
     var lastName = utils.CreateNullString(req.LastName)
+    var gender = utils.CreateNullString(req.Gender)
 
     var dateOfBirth pq.NullTime
     if req.DateOfBirth != nil {
@@ -290,13 +257,13 @@ func (us *UserService) CreateUser(ctx context.Context, req *pb.CreateUserRequest
     var user pb.CreateUserResponse
 
     // Execute the SQL query and scan the result into user
-    err := us.db.QueryRowContext(ctx, query, firstName, lastName, req.PhoneNumber, false, req.Gender, dateOfBirth, location, email, profilePhotoUrl).Scan(
+    err := us.db.QueryRowContext(ctx, query, firstName, lastName, req.PhoneNumber, false, gender, dateOfBirth, location, email, profilePhotoUrl).Scan(
         &user.Id,
         &firstName,
         &lastName,
         &user.PhoneNumber,
         &user.Blocked,
-        &user.Gender,
+        &gender,
         &dateOfBirth, // Not modified before Scan
         &location,
         &email,
@@ -311,6 +278,7 @@ func (us *UserService) CreateUser(ctx context.Context, req *pb.CreateUserRequest
 
     user.FirstName = utils.NullableStringToString(firstName.Valid, firstName.String)
     user.LastName = utils.NullableStringToString(lastName.Valid, lastName.String)
+    user.Gender = utils.NullableStringToString(gender.Valid, gender.String)
 
     // Convert the pq.NullTime value to a DateOfBirth protobuf [for response only]
     if dateOfBirth.Valid {
