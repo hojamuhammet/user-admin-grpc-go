@@ -45,7 +45,7 @@ var phoneNumberPattern = regexp.MustCompile(`^\+993\d{8}$`)
 func (us *UserService) GetAllUsers(ctx context.Context, req *pb.PaginationRequest) (*pb.UsersList, error) {
     pageSize := req.PageSize
     if pageSize <= 0 {
-        pageSize = 10 // Default page size
+        pageSize = 12 // Default page size
     }
     pageToken := req.PageToken
 
@@ -76,22 +76,27 @@ func (us *UserService) GetAllUsers(ctx context.Context, req *pb.PaginationReques
     // Iterate over the rows returned by the query
     for rows.Next() {
         var user pb.GetUserResponse
+        var firstName sql.NullString
+        var lastName sql.NullString
+        var gender sql.NullString
         var dateOfBirth sql.NullTime
+        var location sql.NullString
         var email sql.NullString
+        var profilePhotoUrl sql.NullString
         var registrationTime time.Time
 
         // Scan the row data into user, registrationTime, and other fields
         if err := rows.Scan(
             &user.Id,
-            &user.FirstName,
-            &user.LastName,
+            &firstName,
+            &lastName,
             &user.PhoneNumber,
             &user.Blocked,
-            &user.Gender,
+            &gender,
             &dateOfBirth,
-            &user.Location,
+            &location,
             &email,
-            &user.ProfilePhotoUrl,
+            &profilePhotoUrl,
             &registrationTime,
         ); err != nil {
             // Log the error and return an internal server error status
@@ -112,6 +117,18 @@ func (us *UserService) GetAllUsers(ctx context.Context, req *pb.PaginationReques
         // Set the custom registration date in the user response
         user.RegistrationDate = customTimestamp
 
+        if firstName.Valid {
+            user.FirstName = firstName.String
+        }
+
+        if lastName.Valid {
+            user.LastName = lastName.String
+        }
+
+        if gender.Valid {
+            user.Gender = gender.String
+        }
+
         // Handle the date of birth based on NullTime
         if dateOfBirth.Valid {
             user.DateOfBirth = &pb.DateOfBirth{
@@ -123,9 +140,17 @@ func (us *UserService) GetAllUsers(ctx context.Context, req *pb.PaginationReques
             user.DateOfBirth = nil // Set user.DateOfBirth to nil when date of birth is NULL
         }
 
+        if location.Valid {
+            user.Location = location.String
+        }
+
         // Check if email is valid and set it in the response
         if email.Valid {
             user.Email = email.String
+        }
+
+        if profilePhotoUrl.Valid { 
+            user.ProfilePhotoUrl = profilePhotoUrl.String
         }
 
         // Append the user to the list of users
@@ -154,23 +179,29 @@ func (us *UserService) GetUserById(ctx context.Context, req *pb.UserID) (*pb.Get
 
     // Variables to store user details
     var user pb.GetUserResponse
-    var registrationDate pq.NullTime
+    var firstName sql.NullString
+    var lastName sql.NullString
+    var gender sql.NullString
     var dateOfBirth sql.NullTime
+    var location sql.NullString
     var email sql.NullString
+    var profilePhotoUrl sql.NullString
+    var registrationTime time.Time
+    
 
     // Execute the query with the user's ID
     err := us.db.QueryRowContext(ctx, query, req.Id).Scan(
         &user.Id,
-        &user.FirstName,
-        &user.LastName,
+        &firstName,
+        &lastName,
         &user.PhoneNumber,
         &user.Blocked,
-        &registrationDate, // Scan registration_date as pq.NullTime
-        &user.Gender,
+        &registrationTime, // Scan registration_date as pq.NullTime
+        &gender,
         &dateOfBirth,
-        &user.Location,
+        &location,
         &email,
-        &user.ProfilePhotoUrl,
+        &profilePhotoUrl,
     )
     if err != nil {
         if err == sql.ErrNoRows {
@@ -182,18 +213,30 @@ func (us *UserService) GetUserById(ctx context.Context, req *pb.UserID) (*pb.Get
 
     // Convert the registration timestamp to the custom type
     customTimestamp := &pb.CustomTimestamp{
-        Year:   int32(registrationDate.Time.Year()),
-        Month:  int32(registrationDate.Time.Month()),
-        Day:    int32(registrationDate.Time.Day()),
-        Hour:   int32(registrationDate.Time.Hour()),
-        Minute: int32(registrationDate.Time.Minute()),
-        Second: int32(registrationDate.Time.Second()),
+        Year:   int32(registrationTime.Year()),
+        Month:  int32(registrationTime.Month()),
+        Day:    int32(registrationTime.Day()),
+        Hour:   int32(registrationTime.Hour()),
+        Minute: int32(registrationTime.Minute()),
+        Second: int32(registrationTime.Second()),
     }
 
     // Set the custom registration date in the user response
     user.RegistrationDate = customTimestamp
 
-     // Handle the date of birth based on NullTime
+    if firstName.Valid {
+        user.FirstName = firstName.String
+    }
+
+    if lastName.Valid {
+        user.LastName = lastName.String
+    }
+
+    if gender.Valid {
+        user.Gender = gender.String
+    }
+
+    // Handle the date of birth based on NullTime
     if dateOfBirth.Valid {
         user.DateOfBirth = &pb.DateOfBirth{
             Year:  int32(dateOfBirth.Time.Year()),
@@ -204,11 +247,19 @@ func (us *UserService) GetUserById(ctx context.Context, req *pb.UserID) (*pb.Get
         user.DateOfBirth = nil // Set user.DateOfBirth to nil when date of birth is NULL
     }
 
+    if location.Valid {
+        user.Location = location.String
+    }
+
     // Check if email is valid and set it in the response
     if email.Valid {
         user.Email = email.String
     }
 
+    if profilePhotoUrl.Valid { 
+        user.ProfilePhotoUrl = profilePhotoUrl.String
+    }
+    
     return &user, nil
 }
 
