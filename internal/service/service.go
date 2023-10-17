@@ -54,10 +54,10 @@ func (us *UserService) GetAllUsers(ctx context.Context, req *pb.PaginationReques
 
     // If a valid pageToken is provided, add it to the SQL query for pagination
     if pageToken != "" {
-        query = "SELECT id, first_name, last_name, phone_number, blocked, gender, date_of_birth, location, email, profile_photo_url, registration_date FROM users WHERE id > $1 ORDER BY id LIMIT $2"
+        query = "SELECT id, first_name, last_name, phone_number, blocked, registration_date, gender, date_of_birth, location, email, profile_photo_url FROM users WHERE id > $1 ORDER BY id LIMIT $2"
         args = append(args, pageToken, pageSize)
     } else {
-        query = "SELECT id, first_name, last_name, phone_number, blocked, gender, date_of_birth, location, email, profile_photo_url, registration_date FROM users ORDER BY id LIMIT $1"
+        query = "SELECT id, first_name, last_name, phone_number, blocked, registration_date, gender, date_of_birth, location, email, profile_photo_url FROM users ORDER BY id LIMIT $1"
         args = append(args, pageSize)
     }
 
@@ -78,26 +78,26 @@ func (us *UserService) GetAllUsers(ctx context.Context, req *pb.PaginationReques
         var user pb.GetUserResponse
         var firstName sql.NullString
         var lastName sql.NullString
+        var registrationDate time.Time
         var gender sql.NullString
         var dateOfBirth sql.NullTime
         var location sql.NullString
         var email sql.NullString
         var profilePhotoUrl sql.NullString
-        var registrationTime time.Time
 
-        // Scan the row data into user, registrationTime, and other fields
+        // Scan the row data into user, registrationDate, and other fields
         if err := rows.Scan(
             &user.Id,
             &firstName,
             &lastName,
             &user.PhoneNumber,
             &user.Blocked,
+            &registrationDate,
             &gender,
             &dateOfBirth,
             &location,
             &email,
             &profilePhotoUrl,
-            &registrationTime,
         ); err != nil {
             // Log the error and return an internal server error status
             log.Printf("Error scanning rows: %v", err)
@@ -106,12 +106,12 @@ func (us *UserService) GetAllUsers(ctx context.Context, req *pb.PaginationReques
 
         // Convert the registration timestamp to the custom type
         customTimestamp := &pb.CustomTimestamp{
-            Year:   int32(registrationTime.Year()),
-            Month:  int32(registrationTime.Month()),
-            Day:    int32(registrationTime.Day()),
-            Hour:   int32(registrationTime.Hour()),
-            Minute: int32(registrationTime.Minute()),
-            Second: int32(registrationTime.Second()),
+            Year:   int32(registrationDate.Year()),
+            Month:  int32(registrationDate.Month()),
+            Day:    int32(registrationDate.Day()),
+            Hour:   int32(registrationDate.Hour()),
+            Minute: int32(registrationDate.Minute()),
+            Second: int32(registrationDate.Second()),
         }
 
         // Set the custom registration date in the user response
@@ -164,12 +164,12 @@ func (us *UserService) GetUserById(ctx context.Context, req *pb.UserID) (*pb.Get
     var user pb.GetUserResponse
     var firstName sql.NullString
     var lastName sql.NullString
+    var registrationDate time.Time
     var gender sql.NullString
     var dateOfBirth sql.NullTime
     var location sql.NullString
     var email sql.NullString
     var profilePhotoUrl sql.NullString
-    var registrationTime time.Time
     
 
     // Execute the query with the user's ID
@@ -179,7 +179,7 @@ func (us *UserService) GetUserById(ctx context.Context, req *pb.UserID) (*pb.Get
         &lastName,
         &user.PhoneNumber,
         &user.Blocked,
-        &registrationTime, // Scan registration_date as pq.NullTime
+        &registrationDate, // Scan registration_date as pq.NullTime
         &gender,
         &dateOfBirth,
         &location,
@@ -196,12 +196,12 @@ func (us *UserService) GetUserById(ctx context.Context, req *pb.UserID) (*pb.Get
 
     // Convert the registration timestamp to the custom type
     customTimestamp := &pb.CustomTimestamp{
-        Year:   int32(registrationTime.Year()),
-        Month:  int32(registrationTime.Month()),
-        Day:    int32(registrationTime.Day()),
-        Hour:   int32(registrationTime.Hour()),
-        Minute: int32(registrationTime.Minute()),
-        Second: int32(registrationTime.Second()),
+        Year:   int32(registrationDate.Year()),
+        Month:  int32(registrationDate.Month()),
+        Day:    int32(registrationDate.Day()),
+        Hour:   int32(registrationDate.Hour()),
+        Minute: int32(registrationDate.Minute()),
+        Second: int32(registrationDate.Second()),
     }
 
     // Set the custom registration date in the user response
