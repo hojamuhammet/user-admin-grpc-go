@@ -5,7 +5,7 @@ CREATE TABLE users (
     phone_number VARCHAR(12) NOT NULL UNIQUE,
     blocked BOOLEAN NOT NULL DEFAULT false,
     registration_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    otp VARCHAR(6) UNIQUE,
+    otp INTEGER(6) UNIQUE,
     otp_created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     gender VARCHAR(10),
     date_of_birth DATE,
