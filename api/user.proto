@@ -27,14 +27,14 @@ message UserID {
 
 message UsersList {
     repeated GetUserResponse users = 1;
-    string next_page_token = 2;
+    int32 previous_page = 2;
+    int32 next_page = 3;
 }
 
 message PaginationRequest {
-    int32 page_size = 1;
-    string page_token = 2;
-    string next_page_token = 3;
-
+    int32 page = 1;
+    int32 previous_page = 2;
+    int32 page_size = 3;
 }
 
 message GetUserResponse {

@@ -41,27 +41,35 @@ func (us *UserService) RegisterService(server *grpc.Server) {
 // Regular expression pattern for a valid phone number
 var phoneNumberPattern = regexp.MustCompile(`^\+993\d{8}$`)
 
-// GetAllUsers retrieves a list of all users from the database.
+// GetAllUsers retrieves a list of users from the database using offset and limit.
 func (us *UserService) GetAllUsers(ctx context.Context, req *pb.PaginationRequest) (*pb.UsersList, error) {
     pageSize := req.PageSize
     if pageSize <= 0 {
         pageSize = 12 // Default page size
     }
-    pageToken := req.PageToken
+    page := req.Page
+    previousPage := req.PreviousPage
+
+    // Handle negative page numbers and set them to 1
+    if page <= 0 {
+        page = 1
+    }
+
+    // Handle previous page requests with no previous page available
+    if previousPage <= 0 {
+        previousPage = 1
+    }
 
     var query string
     var args []interface{}
 
-    // If a valid pageToken is provided, add it to the SQL query for pagination
-    if pageToken != "" {
-        query = "SELECT id, first_name, last_name, phone_number, blocked, registration_date, gender, date_of_birth, location, email, profile_photo_url FROM users WHERE id > $1 ORDER BY id LIMIT $2"
-        args = append(args, pageToken, pageSize)
-    } else {
-        query = "SELECT id, first_name, last_name, phone_number, blocked, registration_date, gender, date_of_birth, location, email, profile_photo_url FROM users ORDER BY id LIMIT $1"
-        args = append(args, pageSize)
-    }
+    // Calculate the offset based on the page or previous page
+    offset := (page - 1) * pageSize
 
-    // Execute a SQL query to select user data from the database
+    query = "SELECT id, first_name, last_name, phone_number, blocked, registration_date, gender, date_of_birth, location, email, profile_photo_url FROM users ORDER BY id LIMIT $1 OFFSET $2"
+    args = append(args, pageSize, offset)
+
+    // Execute the SQL query to select user data from the database
     rows, err := us.db.QueryContext(ctx, query, args...)
     if err != nil {
         // Log the error and return an internal server error status
@@ -71,7 +79,6 @@ func (us *UserService) GetAllUsers(ctx context.Context, req *pb.PaginationReques
     defer rows.Close()
 
     var users []*pb.GetUserResponse
-    var lastUserId string
 
     // Iterate over the rows returned by the query
     for rows.Next() {
@@ -138,9 +145,6 @@ func (us *UserService) GetAllUsers(ctx context.Context, req *pb.PaginationReques
 
         // Append the user to the list of users
         users = append(users, &user)
-
-        // Set the lastUserId to the current user's ID
-        lastUserId = strconv.Itoa(int(user.Id))
     }
 
     // Check for any errors that occurred during iteration
@@ -150,10 +154,12 @@ func (us *UserService) GetAllUsers(ctx context.Context, req *pb.PaginationReques
         return nil, status.Errorf(codes.Internal, "Internal server error")
     }
 
-    nextPageToken := lastUserId
+    // Determine the next page number based on the current page and page size
+    nextPage := page + 1
+    previousPage = page - 1
 
     // Return the list of users as a UsersList response
-    return &pb.UsersList{Users: users, NextPageToken: nextPageToken}, nil
+    return &pb.UsersList{Users: users, NextPage: nextPage, PreviousPage: previousPage}, nil
 }
 
 func (us *UserService) GetUserById(ctx context.Context, req *pb.UserID) (*pb.GetUserResponse, error) {
