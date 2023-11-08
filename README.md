@@ -111,5 +111,3 @@ We welcome your contributions!
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 ```
-
-You can copy and paste this content into a `README.md` file in your GitHub repository, and it will display the command sections as code blocks.
