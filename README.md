@@ -4,13 +4,13 @@ User Admin gRPC Go is a sample Go application that demonstrates a user managemen
 
 ## Table of Contents
 
-- [Prerequisites](#prerequisites)
-- [Installation](#installation)
-- [Configuration](#configuration)
-- [Usage](#usage)
-- [API Documentation](#api-documentation)
-- [Contributing](#contributing)
-- [License](#license)
+- [User Admin gRPC Go](#user-admin-grpc-go)
+  - [Table of Contents](#table-of-contents)
+  - [Prerequisites](#prerequisites)
+  - [Installation](#installation)
+  - [Configuration](#configuration)
+  - [Usage](#usage)
+  - [Contributing](#contributing)
 
 ## Prerequisites
 
@@ -75,10 +75,6 @@ To compile and run the User Admin gRPC Go application, follow these steps:
 
 The gRPC server will start, and you can begin using the API.
 
-## API Documentation
-
-For API documentation, refer to the gRPC service definitions in the `gen` directory. You can use tools like [gRPCurl](https://github.com/fullstorydev/grpcurl) or [gRPC GUI](https://github.com/fullstorydev/grpcui) to explore and interact with the API.
-
 ## Contributing
 
 If you'd like to contribute to this project, please follow the standard GitHub flow:
@@ -106,8 +102,4 @@ If you'd like to contribute to this project, please follow the standard GitHub f
 5. Create a pull request.
 
 We welcome your contributions!
-
-## License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 ```
