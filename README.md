@@ -1,16 +1,14 @@
-# User Admin gRPC Go
+# User Administration
 
-User Admin gRPC Go is a sample Go application that demonstrates a user management system using gRPC for communication and a PostgreSQL database for data storage.
+User administration - is a simple Go back end that demonstrates a user management system using gRPC for communication and a PostgreSQL database for data storage.
 
 ## Table of Contents
 
-- [User Admin gRPC Go](#user-admin-grpc-go)
-  - [Table of Contents](#table-of-contents)
-  - [Prerequisites](#prerequisites)
-  - [Installation](#installation)
-  - [Configuration](#configuration)
-  - [Usage](#usage)
-  - [Contributing](#contributing)
+- [Prerequisites](#prerequisites)
+- [Installation](#installation)
+- [Configuration](#configuration)
+- [Compilation of Proto Files](#compilation-of-proto-files)
+- [Usage](#usage)
 
 ## Prerequisites
 
@@ -25,7 +23,7 @@ Before you can run the User Admin gRPC Go application, you need to ensure that y
 1. Clone this repository to your local machine:
 
    ```bash
-   git clone https://github.com/hojamuhammet/user-admin-grpc-go.git
+   git clone https://git.digital-tps.tk/Kemal/user-admin-grpc-go.git
    ```
 
 2. Change to the project directory:
@@ -41,9 +39,7 @@ Before you can run the User Admin gRPC Go application, you need to ensure that y
    ```
 
 ## Configuration
-
-The User Admin gRPC Go application relies on environment variables for configuration. Create a `.env` file in the project root directory with the following environment variables:
-
+Create a .env file in the project root directory with the following environment variables:
 ```bash
 DB_HOST=your_database_host
 DB_PORT=your_database_port
@@ -53,11 +49,28 @@ DB_NAME=your_database_name
 GRPC_PORT=your_desired_grpc_port
 ```
 
-Make sure to replace the placeholders with your actual database and gRPC server details.
+# Compilation of Proto Files
+1. Install protoc:
+
+   You can download and install protoc from the official Protocol Buffers website: https://protobuf.dev/downloads/
+
+2. Install the Go Protocol Buffers plugin:
+
+   You can install the Go Protocol Buffers plugin using the following command:
+   ```bash
+   go get google.golang.org/protobuf/cmd/protoc-gen-go
+   ```
+3. Compile the .proto files:
+
+   Run the following command in the project root directory to compile the .proto files:
+   ```bash
+   protoc --go_out=. --go-grpc_out=. api/user.proto
+   ```
+   This command generates Go code for the gRPC service in the gen/ directory based on the user.proto file.
 
 ## Usage
 
-To compile and run the User Admin gRPC Go application, follow these steps:
+To run the application, follow these steps:
 
 1. Start your PostgreSQL database.
 
@@ -72,33 +85,3 @@ To compile and run the User Admin gRPC Go application, follow these steps:
    ```bash
    ./main
    ```
-
-The gRPC server will start, and you can begin using the API.
-
-## Contributing
-
-If you'd like to contribute to this project, please follow the standard GitHub flow:
-
-1. Fork the repository.
-
-2. Create a feature branch:
-
-   ```bash
-   git checkout -b feature/new-feature
-   ```
-
-3. Commit your changes:
-
-   ```bash
-   git commit -m "Add new feature"
-   ```
-
-4. Push to your fork:
-
-   ```bash
-   git push origin feature/new-feature
-   ```
-
-5. Create a pull request.
-
-We welcome your contributions!
