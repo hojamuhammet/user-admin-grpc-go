@@ -102,4 +102,3 @@ If you'd like to contribute to this project, please follow the standard GitHub f
 5. Create a pull request.
 
 We welcome your contributions!
-```
