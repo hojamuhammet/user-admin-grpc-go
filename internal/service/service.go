@@ -41,7 +41,6 @@ func (us *UserService) RegisterService(server *grpc.Server) {
 // Regular expression pattern for a valid phone number
 var phoneNumberPattern = regexp.MustCompile(`^\+993\d{8}$`)
 
-// GetAllUsers retrieves a list of users from the database using offset and limit.
 func (us *UserService) GetAllUsers(ctx context.Context, req *pb.PaginationRequest) (*pb.UsersList, error) {
     pageSize := req.PageSize
     if pageSize <= 0 {
@@ -444,7 +443,6 @@ func (us *UserService) UpdateUser(ctx context.Context, req *pb.UpdateUserRequest
     return &updatedUser, nil
 }
 
-// DeleteUser deletes a user from the database by their ID and returns an empty response.
 func (us *UserService) DeleteUser(ctx context.Context, userID *pb.UserID) (*pb.Empty, error) {
 	log.Printf("Deleting user with ID: %d", userID.Id)
 
@@ -492,7 +490,6 @@ func (us *UserService) ToggleBlockStatus(ctx context.Context, userID *pb.UserID,
 	return nil
 }
 
-// BlockUser updates the "blocked" status of a user in the database and returns an empty response.
 func (us *UserService) BlockUser(ctx context.Context, userID *pb.UserID) (*pb.Empty, error) {
 	if err := us.ToggleBlockStatus(ctx, userID, true); err != nil {
 		if status.Code(err) == codes.NotFound {
@@ -507,7 +504,6 @@ func (us *UserService) BlockUser(ctx context.Context, userID *pb.UserID) (*pb.Em
 	return &pb.Empty{}, nil
 }
 
-// UnblockUser updates the "blocked" status of a user in the database and returns an empty response.
 func (us *UserService) UnblockUser(ctx context.Context, userID *pb.UserID) (*pb.Empty, error) {
 	if err := us.ToggleBlockStatus(ctx, userID, false); err != nil {
 		if status.Code(err) == codes.NotFound {
