@@ -4,11 +4,13 @@ User administration - is a simple Go back end that demonstrates a user managemen
 
 ## Table of Contents
 
-- [Prerequisites](#prerequisites)
-- [Installation](#installation)
-- [Configuration](#configuration)
+- [User Administration](#user-administration)
+  - [Table of Contents](#table-of-contents)
+  - [Prerequisites](#prerequisites)
+  - [Installation](#installation)
+  - [Configuration](#configuration)
 - [Compilation of Proto Files](#compilation-of-proto-files)
-- [Usage](#usage)
+  - [Usage](#usage)
 
 ## Prerequisites
 
@@ -23,7 +25,7 @@ Before you can run the User Admin gRPC Go application, you need to ensure that y
 1. Clone this repository to your local machine:
 
    ```bash
-   git clone https://github.com/hojamuhammet/user-admin-grpc-go.git
+   git clone https://git.digital-tps.tk/Kemal/user-admin-grpc-go
    ```
 
 2. Change to the project directory:
