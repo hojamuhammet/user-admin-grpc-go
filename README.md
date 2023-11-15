@@ -25,7 +25,7 @@ Before you can run the User Admin gRPC Go application, you need to ensure that y
 1. Clone this repository to your local machine:
 
    ```bash
-   git clone https://github.com/hojamuhammet/user-admin-grpc-go.git
+   git clone https://git.digital-tps.tk/Kemal/user-admin-grpc-go.git
    ```
 
 2. Change to the project directory:
