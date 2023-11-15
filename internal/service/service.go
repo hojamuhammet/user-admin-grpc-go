@@ -105,7 +105,6 @@ func (us *UserService) GetAllUsers(ctx context.Context, req *pb.PaginationReques
             &email,
             &profilePhotoUrl,
         ); err != nil {
-            // Log the error and return an internal server error status
             log.Printf("Error scanning rows: %v", err)
             return nil, status.Errorf(codes.Internal, "Internal server error")
         }
@@ -148,7 +147,6 @@ func (us *UserService) GetAllUsers(ctx context.Context, req *pb.PaginationReques
 
     // Check for any errors that occurred during iteration
     if err := rows.Err(); err != nil {
-        // Log the error and return an internal server error status
         log.Printf("Error iterating over rows: %v", err)
         return nil, status.Errorf(codes.Internal, "Internal server error")
     }
@@ -276,7 +274,6 @@ func (us *UserService) CreateUser(ctx context.Context, req *pb.CreateUserRequest
     )
 
     if err != nil {
-        // Log the error and return an internal server error to the client
         log.Printf("Error creating user: %v", err)
         return nil, status.Errorf(codes.Internal, "Internal server error")
     }
@@ -372,9 +369,8 @@ func (us *UserService) UpdateUser(ctx context.Context, req *pb.UpdateUserRequest
         argCount++
     }
 
-     // Handle the email field using pq.NullString
     if req.Email == "null" {
-        query += "email = NULL, " // Set the email to NULL in the database
+        query += "email = NULL, "
     } else if req.Email != "" {
         query += "email = $" + strconv.Itoa(argCount) + ", "
         args = append(args, req.Email)
