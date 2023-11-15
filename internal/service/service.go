@@ -91,7 +91,7 @@ func (us *UserService) GetAllUsers(ctx context.Context, req *pb.PaginationReques
         var email sql.NullString
         var profilePhotoUrl sql.NullString
 
-        // Scan the row data into user, registrationDate, and other fields
+        // Scan the row data into user
         if err := rows.Scan(
             &user.Id,
             &firstName,
